@@ -18,6 +18,8 @@ services:
       timeout: 5s
       retries: 15
       start_period: 15s
+    networks:
+      - rejka-local
 
   api:
     build:
@@ -34,9 +36,27 @@ services:
       - Authentication__Jwt__Issuer=RejkaApi
       - Authentication__Jwt__Audience=RejkaApp
       - Authentication__Jwt__SigningKey=dGhpc19pc19hX3Zlcnlfc3Ryb25nX3NlY3JldF9rZXlfZm9yX2p3dF90b2tlbl8yNTZiaXRzIQ==
+    networks:
+      - rejka-local
     depends_on:
       db:
         condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: rejka-frontend
+    ports:
+      - "8000:80"
+    networks:
+      - rejka-local
+    depends_on:
+      - api
+
+networks:
+  rejka-local:
+    driver: bridge
 
 volumes:
   rejka-db-data:
