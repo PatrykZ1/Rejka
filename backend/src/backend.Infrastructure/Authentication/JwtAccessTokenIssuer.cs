@@ -47,15 +47,9 @@ public sealed class JwtAccessTokenIssuer : IAccessTokenIssuer
         DateTimeOffset issuedAt,
         DateTimeOffset expiresAt)
     {
-        if (userId <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(userId));
-        }
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(userId);
 
-        if (expiresAt <= issuedAt)
-        {
-            throw new ArgumentOutOfRangeException(nameof(expiresAt));
-        }
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(expiresAt, issuedAt);
 
         var userIdValue = userId.ToString(CultureInfo.InvariantCulture);
         var stateValue = userState switch
