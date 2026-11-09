@@ -1,0 +1,42 @@
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: rejka-db
+    restart: unless-stopped
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=YourStrong@Password123!
+      - MSSQL_PID=Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - rejka-db-data:/var/opt/mssql
+      - ./backend/database/init.sql:/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Password123!' -C -Q 'SELECT 1' || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Password123!' -Q 'SELECT 1' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 15s
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: src/backend.API/Dockerfile
+    container_name: rejka-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Server=db,1433;Database=RejkaDb;User Id=sa;Password=YourStrong@Password123!;TrustServerCertificate=True;Encrypt=False;
+      - Authentication__Jwt__Issuer=RejkaApi
+      - Authentication__Jwt__Audience=RejkaApp
+      - Authentication__Jwt__SigningKey=dGhpc19pc19hX3Zlcnlfc3Ryb25nX3NlY3JldF9rZXlfZm9yX2p3dF90b2tlbl8yNTZiaXRzIQ==
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  rejka-db-data:
