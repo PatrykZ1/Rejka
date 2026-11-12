@@ -3,6 +3,14 @@ using backend.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddCors(options => {
+    options.AddPolicy(name: "_allowSpecificsOrigins",
+                      builder => 
+		      {
+		          builder.WithOrigins("http://localhost:8000");
+		      });
+});
+
 builder.Services.AddControllers();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
