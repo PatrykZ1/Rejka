@@ -1,8 +1,47 @@
+import 'package:boundingbox/api/api_account.dart';
 import 'package:boundingbox/constants.dart';
 import 'package:flutter/material.dart';
 
-class RegisterScreen extends StatelessWidget {
+class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
+
+  @override
+  State<RegisterScreen> createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends State<RegisterScreen> {
+  final ApiAccount api = ApiAccount();
+
+  final TextEditingController usernameController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    usernameController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> register(BuildContext context) async {
+    final username = usernameController.text;
+    final email = emailController.text;
+    final password = passwordController.text;
+
+    try {
+      await api.register(
+        username: username,
+        email: email,
+        password: password,
+      );
+    } catch (e) {
+      final snackBar = SnackBar(content: Text('Błąd: ${e.toString()}'), backgroundColor: Colors.red);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +56,6 @@ class RegisterScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-
             const Text(
               'Załóż konto',
               style: TextStyle(
@@ -29,6 +67,7 @@ class RegisterScreen extends StatelessWidget {
             const SizedBox(height: 30),
 
             TextField(
+              controller: usernameController,
               decoration: InputDecoration(
                 labelText: 'Nazwa',
                 prefixIcon: const Icon(Icons.person),
@@ -41,6 +80,7 @@ class RegisterScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             TextField(
+              controller: emailController,
               keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
                 labelText: 'Email',
@@ -54,6 +94,7 @@ class RegisterScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             TextField(
+              controller: passwordController,
               obscureText: true,
               decoration: InputDecoration(
                 labelText: 'Hasło',
@@ -70,9 +111,7 @@ class RegisterScreen extends StatelessWidget {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: () {
-                  print('Rejestracja');
-                },
+                onPressed: () => register(context),
                 child: const Text(
                   'Załóż',
                   style: TextStyle(fontSize: 18),

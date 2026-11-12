@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:boundingbox/constants.dart';
 import 'package:dio/dio.dart';
 
@@ -28,11 +30,20 @@ class ApiCore {
   }
 
   Future<Response> get(String path, {Map<String, dynamic>? queryParameters}) async {
+    try {
       return await _dio.get(path, queryParameters: queryParameters);
+    } on SocketException catch(e) {
+      throw Exception('Brak połączenia z serwerem');
+    }
   }
 
   Future<Response> post(String path, {Map<String, dynamic>? queryParameters, dynamic data}) async {
-      return await _dio.post(path, queryParameters: queryParameters, data: data);
+      try {
+        return await _dio.post(path, queryParameters: queryParameters, data: data);
+      } on DioException catch(e) {
+        rethrow;
+        //throw Exception('Brak połączenia z serwerem');
+      }
   }
 
   Future<Response> patch(String path, {Map<String, dynamic>? queryParameters, dynamic data}) async {
