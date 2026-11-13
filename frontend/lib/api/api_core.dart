@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:boundingbox/constants.dart';
+import 'package:boundingbox/exceptions/api_response_exception.dart';
 import 'package:dio/dio.dart';
 
 class ApiCore {
@@ -36,7 +37,7 @@ class ApiCore {
       if (e.type == DioExceptionType.badResponse) {
         rethrow;
       }
-      throw Exception('Brak połączenia z serwerem');
+      throw ApiResponseException('Błąd połączenia z serwerem');
     }
   }
 
@@ -47,7 +48,7 @@ class ApiCore {
       if (e.type == DioExceptionType.badResponse) {
         rethrow;
       }
-      throw Exception('Brak połączenia z serwerem');
+      throw ApiResponseException('Błąd połączenia z serwerem');
     }
   }
 
