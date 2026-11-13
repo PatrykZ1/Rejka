@@ -11,6 +11,7 @@ RUN flutter doctor
 WORKDIR /app
 COPY . .
 
+RUN dart run build_runner build --delete-conflicting-outputs
 RUN flutter build web --release -t lib/main.dart
 
 FROM nginx:alpine
