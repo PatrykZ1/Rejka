@@ -28,4 +28,17 @@ class ApiAccount {
       }
     }
   }
+
+  Future<void> login({required String email, required String password}) async {
+    try {
+
+
+    } on DioException catch(e) {
+      switch (e.response?.statusCode) {
+        default: {
+          throw ApiResponseException('Nieznany błąd.');
+        }
+      }
+    }
+  }
 }
