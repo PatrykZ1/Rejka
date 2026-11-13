@@ -2,6 +2,24 @@
 
 A new Flutter project.
 
+### Building and compiling
+
+First clean builds and get packages:
+```
+flutter pub clean
+flutter pub get
+```
+
+Then run build_runner to generate needed helper files:
+```
+dart run build_runner build
+```
+
+then compile android application with
+```
+flutter build apk --release
+```
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.
