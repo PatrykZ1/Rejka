@@ -1,4 +1,5 @@
 
+import 'package:boundingbox/screens/login_screen.dart';
 import 'package:boundingbox/screens/register_screen.dart';
 import 'package:go_router/go_router.dart';
 
@@ -6,7 +7,7 @@ import '../screens/home_screen.dart';
 import '../screens/detector_screen.dart';
 
 final GoRouter router = GoRouter(
-  initialLocation: '/register',
+  initialLocation: '/login',
   routes: [
     GoRoute(
       path: '/',
@@ -14,6 +15,9 @@ final GoRouter router = GoRouter(
     ),
     GoRoute(path: '/register',
       builder: (context, state) => const RegisterScreen(),
+    ),
+    GoRoute(path: '/login',
+      builder: (context, state) => const LoginScreen(),
     ),
     GoRoute(
       path: '/detector',

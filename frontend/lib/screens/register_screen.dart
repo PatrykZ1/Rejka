@@ -1,6 +1,7 @@
 import 'package:boundingbox/api/api_account.dart';
 import 'package:boundingbox/constants.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -41,6 +42,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
         email: email,
         password: password,
       );
+
+      if (context.mounted) {
+        context.go('/register');
+
+        final snackBar = SnackBar(
+          content: Text('Zarejestrowano konto.'),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      }
     } catch (e) {
       if (context.mounted) {
         final snackBar = SnackBar(
@@ -162,6 +172,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
               ),
+
+              const SizedBox(height: 20),
+
+              TextButton(onPressed: () => context.go('/login'), child: Text('Zaloguj się na istniejące konto'))
             ],
           ),
         ),
