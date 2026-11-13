@@ -36,7 +36,11 @@ class ApiAccount {
     try {
       final request = LoginRequest(email: email, password: password);
       final response = await _api.post(apiUrlLogin, data: request);
-      return LoginResponse.fromJson(response.data);
+
+      final loginResponse = LoginResponse.fromJson(response.data);
+      _api.saveToken(loginResponse.accessToken);
+
+      return loginResponse;
 
     } on DioException catch(e) {
       switch (e.response?.statusCode) {

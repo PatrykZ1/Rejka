@@ -34,12 +34,19 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = passwordController.text;
 
     try {
-      final response = await api.login(
+      await api.login(
         email: email,
         password: password,
       );
 
+      if (context.mounted) {
+        context.go('/');
 
+        final snackBar = SnackBar(
+          content: Text('Zalogowano pomyślnie'),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      }
 
     } catch (e) {
       if (context.mounted) {

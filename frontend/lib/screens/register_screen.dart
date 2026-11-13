@@ -42,6 +42,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
         email: email,
         password: password,
       );
+
+      if (context.mounted) {
+        context.go('/register');
+
+        final snackBar = SnackBar(
+          content: Text('Zarejestrowano konto.'),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      }
     } catch (e) {
       if (context.mounted) {
         final snackBar = SnackBar(
