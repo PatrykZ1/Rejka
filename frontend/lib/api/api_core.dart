@@ -17,6 +17,8 @@ class ApiCore {
   static const String _accessTokenKey = 'jwt_access_token';
   static const String _refreshTokenKey = 'jwt_refresh_token';
 
+  static bool tokenValid = false;
+
   ApiCore() {
     _dio = Dio(
       BaseOptions(
@@ -57,9 +59,18 @@ class ApiCore {
     );
   }
 
-  Future<void> saveToken({required String key, required String token}) async => await _storage.write(key: key, value: token);
-  Future<String?> getToken({required String key}) async => await _storage.read(key: key);
-  Future<void> removeToken({required String key}) async => await _storage.delete(key: key);
+  Future<void> saveToken({required String key, required String token}) async {
+    await _storage.write(key: key, value: token);
+    tokenValid = true;
+    print('token valid: $tokenValid');
+  }
+  Future<String?> getToken({required String key}) async {
+    return await _storage.read(key: key);
+  }
+  Future<void> removeToken({required String key}) async {
+    await _storage.delete(key: key);
+    tokenValid = false;
+  }
 
   Future<void> saveAccessToken(String token) async => await saveToken(key: _accessTokenKey, token: token);
   Future<void> saveRefreshToken(String token) async => await saveToken(key: _refreshTokenKey, token: token);
