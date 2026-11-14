@@ -11,15 +11,9 @@ import 'package:go_router/go_router.dart';
 import 'models/response/login_response.dart';
 
 class ApiCore {
-  late final Dio _dio;
-
-  static const FlutterSecureStorage _storage = FlutterSecureStorage();
-  static const String _accessTokenKey = 'jwt_access_token';
-  static const String _refreshTokenKey = 'jwt_refresh_token';
-
-  static bool tokenValid = false;
-
-  ApiCore() {
+  static final ApiCore _instance = ApiCore._internal();
+  factory ApiCore() => _instance;
+  ApiCore._internal() {
     _dio = Dio(
       BaseOptions(
         baseUrl: backendUrl + apiUrl,
@@ -34,42 +28,52 @@ class ApiCore {
 
     _dio.interceptors.add(
       InterceptorsWrapper(
-        onRequest: (options, handler) async {
-          final token = await getToken(key: _accessTokenKey);
-          if (token != null && token.isNotEmpty) {
-            options.headers['Authorization'] = 'Bearer $token';
-          }
-          return handler.next(options);
-        },
-        // If unauthorized then try to refresh JWT token
-        onResponse: (response, handler) async {
-          if (response.statusCode == 401) {
-            try {
-              await refresh();
-            } catch (e) {
-              // If refresh unsuccessful then reroute to login screen
-              final context = NavigationService.navigatorKey.currentContext;
-              if (context != null && context.mounted) {
-                context.go('/login');
+          onRequest: (options, handler) async {
+            if (await isToken()) {
+              final token = await getToken(key: _accessTokenKey);
+              options.headers['Authorization'] = 'Bearer $token';
+            }
+            return handler.next(options);
+          },
+          // If unauthorized then try to refresh JWT token
+          onResponse: (response, handler) async {
+            if (response.statusCode == 401) {
+              try {
+                await refresh();
+              } catch (e) {
+                // If refresh unsuccessful then reroute to login screen
+                final context = NavigationService.navigatorKey.currentContext;
+                if (context != null && context.mounted) {
+                  context.go('/login');
+                }
               }
             }
+
+            handler.next(response);
           }
-        }
       ),
     );
   }
 
+  late final Dio _dio;
+
+  static const FlutterSecureStorage _storage = FlutterSecureStorage();
+  static const String _accessTokenKey = 'jwt_access_token';
+  static const String _refreshTokenKey = 'jwt_refresh_token';
+
+  Future<bool> isToken() async {
+    final token = await getToken(key: _accessTokenKey);
+    return !(token == null || token.isEmpty);
+  }
+
   Future<void> saveToken({required String key, required String token}) async {
     await _storage.write(key: key, value: token);
-    tokenValid = true;
-    print('token valid: $tokenValid');
   }
   Future<String?> getToken({required String key}) async {
     return await _storage.read(key: key);
   }
   Future<void> removeToken({required String key}) async {
     await _storage.delete(key: key);
-    tokenValid = false;
   }
 
   Future<void> saveAccessToken(String token) async => await saveToken(key: _accessTokenKey, token: token);

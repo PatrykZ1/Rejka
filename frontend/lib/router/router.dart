@@ -10,13 +10,13 @@ import '../screens/detector_screen.dart';
 
 final GoRouter router = GoRouter(
   navigatorKey: NavigationService.navigatorKey,
-  initialLocation: '/',
-  redirect: (context, state) {
-    print('token: ${ApiCore.tokenValid}');
-    if (!ApiCore.tokenValid && state.matchedLocation != '/register') {
+  initialLocation: '/login',
+  redirect: (context, state) async {
+    bool isToken = await ApiCore().isToken();
+    if (!isToken && state.matchedLocation != '/register') {
       return '/login';
     }
-    if (ApiCore.tokenValid && state.matchedLocation == '/login') {
+    if (isToken && state.matchedLocation == '/login') {
       return '/';
     }
     return null;
