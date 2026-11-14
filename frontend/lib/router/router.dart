@@ -1,4 +1,6 @@
 
+import 'package:boundingbox/api/api_core.dart';
+import 'package:boundingbox/app/navigation_service.dart';
 import 'package:boundingbox/screens/login_screen.dart';
 import 'package:boundingbox/screens/register_screen.dart';
 import 'package:go_router/go_router.dart';
@@ -7,7 +9,18 @@ import '../screens/home_screen.dart';
 import '../screens/detector_screen.dart';
 
 final GoRouter router = GoRouter(
+  navigatorKey: NavigationService.navigatorKey,
   initialLocation: '/login',
+  redirect: (context, state) async {
+    bool isToken = await ApiCore().isToken();
+    if (!isToken && state.matchedLocation != '/register') {
+      return '/login';
+    }
+    if (isToken && state.matchedLocation == '/login') {
+      return '/';
+    }
+    return null;
+  },
   routes: [
     GoRoute(
       path: '/',

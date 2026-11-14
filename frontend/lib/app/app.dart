@@ -10,7 +10,7 @@ class BoundingBoxApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      title: 'License Plate Detector',
+      title: 'Rejka',
       theme: AppTheme.dark,
       routerConfig: router,
     );

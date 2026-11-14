@@ -38,7 +38,8 @@ class ApiAccount {
       final response = await _api.post(apiUrlLogin, data: request);
 
       final loginResponse = LoginResponse.fromJson(response.data);
-      _api.saveToken(loginResponse.accessToken);
+      _api.saveAccessToken(loginResponse.accessToken);
+      _api.saveRefreshToken(loginResponse.refreshToken);
 
       return loginResponse;
 
