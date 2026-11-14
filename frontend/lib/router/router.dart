@@ -1,4 +1,5 @@
 
+import 'package:boundingbox/app/navigation_service.dart';
 import 'package:boundingbox/screens/login_screen.dart';
 import 'package:boundingbox/screens/register_screen.dart';
 import 'package:go_router/go_router.dart';
@@ -7,7 +8,8 @@ import '../screens/home_screen.dart';
 import '../screens/detector_screen.dart';
 
 final GoRouter router = GoRouter(
-  initialLocation: '/login',
+  navigatorKey: NavigationService.navigatorKey,
+  initialLocation: '/',
   routes: [
     GoRoute(
       path: '/',

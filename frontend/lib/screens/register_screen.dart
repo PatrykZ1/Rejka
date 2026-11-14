@@ -44,7 +44,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       if (context.mounted) {
-        context.go('/register');
+        context.go('/login');
 
         final snackBar = SnackBar(
           content: Text('Zarejestrowano konto.'),

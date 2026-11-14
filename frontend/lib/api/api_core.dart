@@ -1,15 +1,21 @@
 import 'dart:io';
 
+import 'package:boundingbox/api/models/request/refresh_request.dart';
+import 'package:boundingbox/app/navigation_service.dart';
 import 'package:boundingbox/constants.dart';
 import 'package:boundingbox/exceptions/api_response_exception.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:go_router/go_router.dart';
+
+import 'models/response/login_response.dart';
 
 class ApiCore {
   late final Dio _dio;
 
   static const FlutterSecureStorage _storage = FlutterSecureStorage();
-  static const String _tokenKey = 'jwt_token';
+  static const String _accessTokenKey = 'jwt_access_token';
+  static const String _refreshTokenKey = 'jwt_refresh_token';
 
   ApiCore() {
     _dio = Dio(
@@ -27,27 +33,36 @@ class ApiCore {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          final token = await getToken();
+          final token = await getToken(key: _accessTokenKey);
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
           return handler.next(options);
         },
+        // If unauthorized then try to refresh JWT token
+        onResponse: (response, handler) async {
+          if (response.statusCode == 401) {
+            try {
+              await refresh();
+            } catch (e) {
+              // If refresh unsuccessful then reroute to login screen
+              final context = NavigationService.navigatorKey.currentContext;
+              if (context != null && context.mounted) {
+                context.go('/login');
+              }
+            }
+          }
+        }
       ),
     );
   }
 
-  Future<void> saveToken(String token) async {
-    await _storage.write(key: _tokenKey, value: token);
-  }
+  Future<void> saveToken({required String key, required String token}) async => await _storage.write(key: key, value: token);
+  Future<String?> getToken({required String key}) async => await _storage.read(key: key);
+  Future<void> removeToken({required String key}) async => await _storage.delete(key: key);
 
-  Future<String?> getToken() async {
-    return await _storage.read(key: _tokenKey);
-  }
-
-  Future<void> removeToken() async {
-    await _storage.delete(key: _tokenKey);
-  }
+  Future<void> saveAccessToken(String token) async => await saveToken(key: _accessTokenKey, token: token);
+  Future<void> saveRefreshToken(String token) async => await saveToken(key: _refreshTokenKey, token: token);
 
   Future<Response> get(String path, {Map<String, dynamic>? queryParameters}) async {
     try {
@@ -91,5 +106,40 @@ class ApiCore {
       }
       throw ApiResponseException('Błąd połączenia z serwerem');
     }
+  }
+
+  Future<void> refresh() async {
+    try {
+      final token = await getToken(key: _refreshTokenKey);
+      if (token == null || token.isEmpty) {
+        return;
+      }
+
+      final request = RefreshRequest(refreshToken: token);
+      final response = await post('/account/refresh', data: request);
+      final tokenResponse = LoginResponse.fromJson(response.data);
+      saveAccessToken(tokenResponse.accessToken);
+      saveRefreshToken(tokenResponse.refreshToken);
+      return;
+
+    } on DioException catch (e) {
+      switch(e.response?.statusCode) {
+        case 400: {
+          throw ApiResponseException('Błędne żądanie odświeżenia tokenu.');
+        }
+        case 401: {
+          throw ApiResponseException('Nieuprawnione działanie.');
+        }
+        case 403: {
+          throw ApiResponseException('Token wygasł.');
+        }
+      }
+    } catch (e) {
+      throw ApiResponseException('Nieznany błąd odświeżenia tokenu.');
+    }
+
+    // If error occurred then clear user tokens
+    await removeToken(key: _accessTokenKey);
+    await removeToken(key: _refreshTokenKey);
   }
 }
