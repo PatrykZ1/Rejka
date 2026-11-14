@@ -6,6 +6,8 @@ import 'package:boundingbox/api/urls.dart';
 import 'package:boundingbox/exceptions/api_response_exception.dart';
 import 'package:dio/dio.dart';
 
+import 'models/request/logout_request.dart';
+
 class ApiAccount {
   final ApiCore _api = ApiCore();
 
@@ -56,6 +58,34 @@ class ApiAccount {
         case 403:
           {
             throw ApiResponseException('Użytkownik został zablokowany lub usunięty.');
+          }
+        default: {
+          throw ApiResponseException('Nieznany błąd.');
+        }
+      }
+    }
+  }
+
+  Future<void> logout() async {
+    try {
+      final refreshToken = await _api.getRefreshToken();
+
+      if (refreshToken != null) {
+        final request = LogoutRequest(refreshToken: refreshToken);
+        await _api.post(apiUrlLogout, data: request);
+      }
+
+      await _api.removeTokens();
+
+    } on DioException catch(e) {
+      switch (e.response?.statusCode) {
+        case 401:
+          {
+            throw ApiResponseException('Użytkownik nie jeset zalogowany.');
+          }
+        case 403:
+          {
+            throw ApiResponseException('Brak uprawnień.');
           }
         default: {
           throw ApiResponseException('Nieznany błąd.');
