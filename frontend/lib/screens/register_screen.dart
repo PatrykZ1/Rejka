@@ -1,5 +1,6 @@
 import 'package:boundingbox/api/api_account.dart';
 import 'package:boundingbox/constants.dart';
+import 'package:boundingbox/widgets/snackbars.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -45,20 +46,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (context.mounted) {
         context.go('/login');
-
-        final snackBar = SnackBar(
-          content: Text('Zarejestrowano konto.'),
-        );
-        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        ScaffoldMessenger.of(context).showSnackBar(snackBarInfo('Zarejestrowano konto.'));
       }
     } catch (e) {
       if (context.mounted) {
-        final snackBar = SnackBar(
-          content: Text('Błąd: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        );
-
-        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        ScaffoldMessenger.of(context).showSnackBar(snackBarError('Błąd: ${e.toString()}'));
       }
     }
   }

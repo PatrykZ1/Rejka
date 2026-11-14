@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ultralytics_yolo/ultralytics_yolo.dart';
 
-import '../features/drawer.dart';
+import '../widgets/drawer.dart';
 import '../features/plate_ocr/models/tracked_plate.dart';
 import '../features/plate_ocr/services/plate_pipeline.dart';
 import '../features/plate_ocr/widgets/plate_overlay.dart';

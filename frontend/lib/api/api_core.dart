@@ -62,7 +62,7 @@ class ApiCore {
   static const String _refreshTokenKey = 'jwt_refresh_token';
 
   Future<bool> isToken() async {
-    final token = await getToken(key: _accessTokenKey);
+    final token = await getToken(key: _refreshTokenKey);
     return !(token == null || token.isEmpty);
   }
 
@@ -78,6 +78,11 @@ class ApiCore {
 
   Future<void> saveAccessToken(String token) async => await saveToken(key: _accessTokenKey, token: token);
   Future<void> saveRefreshToken(String token) async => await saveToken(key: _refreshTokenKey, token: token);
+  Future<String?> getRefreshToken() async => await getToken(key: _refreshTokenKey);
+  Future<void> removeTokens() async {
+    await removeToken(key: _accessTokenKey);
+    await removeToken(key: _refreshTokenKey);
+  }
 
   Future<Response> get(String path, {Map<String, dynamic>? queryParameters}) async {
     try {
