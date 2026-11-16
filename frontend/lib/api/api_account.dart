@@ -9,6 +9,15 @@ import 'package:dio/dio.dart';
 import 'models/request/logout_request.dart';
 
 class ApiAccount {
+  // Mock instance used for tests only
+  static ApiAccount? mockInstance;
+
+  // Factory constructor for mock tests
+  factory ApiAccount() {
+    return mockInstance ?? ApiAccount._internal();
+  }
+  ApiAccount._internal();
+
   final ApiCore _api = ApiCore();
 
   Future<void> register({required String username, required String email, required String password}) async {

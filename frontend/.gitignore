@@ -46,3 +46,6 @@ app.*.map.json
 
 # build_runner generated code
 *.g.dart
+
+# tar archives
+*.tar
