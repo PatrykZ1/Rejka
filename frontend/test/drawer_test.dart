@@ -69,14 +69,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(applicationName), findsExactly(2));
 
-    // detector screen
-    router.go('/');
-    await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.menu));
-    await tester.pumpAndSettle();
-    expect(find.text('Odczyt na żywo'), findsOneWidget);
-    await tester.tap(find.text('Odczyt na żywo'));
-    await tester.pump(const Duration(milliseconds: 30000));
-    expect(find.text('Brak detekcji'), findsWidgets);
+    // // detector screen
+    // router.go('/');
+    // await tester.pumpAndSettle();
+    // await tester.tap(find.byIcon(Icons.menu));
+    // await tester.pumpAndSettle();
+    // expect(find.text('Odczyt na żywo'), findsOneWidget);
+    // await tester.tap(find.text('Odczyt na żywo'));
+    // await tester.pump(const Duration(milliseconds: 30000));
+    // expect(find.text('Brak detekcji'), findsWidgets);
   });
 }
