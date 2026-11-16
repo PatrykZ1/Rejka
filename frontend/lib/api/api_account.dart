@@ -46,7 +46,10 @@ class ApiAccount {
   Future<LoginResponse> login({required String email, required String password}) async {
     try {
       if (email == 'test@example.com' && password == 'haslo123') {
-        return LoginResponse(accessToken: 'accessToken', refreshToken: 'refreshToken');
+        final loginResponse = LoginResponse(accessToken: 'accessToken', refreshToken: 'refreshToken');
+        _api.saveAccessToken(loginResponse.accessToken);
+        _api.saveRefreshToken(loginResponse.refreshToken);
+        return loginResponse;
       }
 
       final request = LoginRequest(email: email, password: password);
