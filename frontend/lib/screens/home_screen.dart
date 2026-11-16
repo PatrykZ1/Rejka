@@ -1,3 +1,4 @@
+import 'package:boundingbox/constants.dart';
 import 'package:boundingbox/widgets/drawer.dart';
 import 'package:flutter/material.dart';
 
@@ -8,7 +9,7 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Rejka'),
+        title: const Text(applicationName),
         centerTitle: true,
       ),
 
@@ -16,7 +17,7 @@ class HomeScreen extends StatelessWidget {
 
       body: const Center(
         child: Text(
-          'Rejka',
+          applicationName,
           style: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.bold,
