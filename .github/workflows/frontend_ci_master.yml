@@ -9,7 +9,7 @@ on:
 
 jobs:
   frontend-ci-main:
-    name: Rejka frontend CI
+    name: Rejka frontend CI - master
     runs-on: ubuntu-latest
 
     defaults:

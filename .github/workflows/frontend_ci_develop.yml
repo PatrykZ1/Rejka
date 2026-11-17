@@ -1,4 +1,4 @@
-name: Rejka frontend CI
+name: Rejka frontend CI - dev
 
 on:
   push:
@@ -14,7 +14,7 @@ on:
 
 jobs:
   frontend-ci-dev:
-    name: Rejka frontend CI
+    name: Rejka frontend CI - dev
     runs-on: ubuntu-latest
 
     defaults:
