@@ -9,12 +9,12 @@ class PlateReading {
   });
 
   const PlateReading.empty()
-      : text = '',
-        region = '',
-        serial = '',
-        rawText = '',
-        confidence = 0,
-        capturedAt = null;
+    : text = '',
+      region = '',
+      serial = '',
+      rawText = '',
+      confidence = 0,
+      capturedAt = null;
 
   final String text;
   final String region;

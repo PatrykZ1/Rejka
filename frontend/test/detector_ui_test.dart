@@ -5,25 +5,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('DetectionStatusCard renders detection count and status correctly', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: DetectionStatusCard(
-            detectionCount: 2,
-            lastDetection: 'WA 12345 95.5%',
-            isStreaming: true,
+  testWidgets(
+    'DetectionStatusCard renders detection count and status correctly',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: DetectionStatusCard(
+              detectionCount: 2,
+              lastDetection: 'WA 12345 95.5%',
+              isStreaming: true,
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    expect(find.text('Detekcje: 2'), findsOneWidget);
-    expect(find.text('WA 12345 95.5%'), findsOneWidget);
-    expect(find.byIcon(Icons.directions_car_filled), findsOneWidget);
-  });
+      expect(find.text('Detekcje: 2'), findsOneWidget);
+      expect(find.text('WA 12345 95.5%'), findsOneWidget);
+      expect(find.byIcon(Icons.directions_car_filled), findsOneWidget);
+    },
+  );
 
-  testWidgets('PlateResultCard renders plate text and handles clear action', (WidgetTester tester) async {
+  testWidgets('PlateResultCard renders plate text and handles clear action', (
+    WidgetTester tester,
+  ) async {
     bool cleared = false;
 
     await tester.pumpWidget(

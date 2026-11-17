@@ -38,19 +38,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final password = passwordController.text;
 
     try {
-      await api.register(
-        username: username,
-        email: email,
-        password: password,
-      );
+      await api.register(username: username, email: email, password: password);
 
       if (context.mounted) {
         context.go('/login');
-        ScaffoldMessenger.of(context).showSnackBar(snackBarInfo('Zarejestrowano konto.'));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(snackBarInfo('Zarejestrowano konto.'));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(snackBarError('Błąd: ${e.toString()}'));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(snackBarError('Błąd: ${e.toString()}'));
       }
     }
   }
@@ -58,10 +58,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(applicationName),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text(applicationName), centerTitle: true),
 
       body: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -72,10 +69,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             children: [
               const Text(
                 'Załóż konto',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
 
               const SizedBox(height: 30),
@@ -114,9 +108,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     return 'Wpisz adres email';
                   }
 
-                  final emailRegex = RegExp(
-                    r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                  );
+                  final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
                   if (!emailRegex.hasMatch(value.trim())) {
                     return 'Wpisz poprawny adres email';
@@ -158,16 +150,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 height: 50,
                 child: ElevatedButton(
                   onPressed: () => register(context),
-                  child: const Text(
-                    'Załóż',
-                    style: TextStyle(fontSize: 18),
-                  ),
+                  child: const Text('Załóż', style: TextStyle(fontSize: 18)),
                 ),
               ),
 
               const SizedBox(height: 20),
 
-              TextButton(onPressed: () => context.go('/login'), child: Text('Zaloguj się na istniejące konto'))
+              TextButton(
+                onPressed: () => context.go('/login'),
+                child: Text('Zaloguj się na istniejące konto'),
+              ),
             ],
           ),
         ),

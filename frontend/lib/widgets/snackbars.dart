@@ -6,12 +6,7 @@ SnackBar snackBarInfo(String text) {
 
 SnackBar snackBarError(String text) {
   return SnackBar(
-    content: Text(
-      text,
-      style: TextStyle(
-        color: Colors.white,
-      ),
-    ),
+    content: Text(text, style: TextStyle(color: Colors.white)),
     backgroundColor: Colors.red,
   );
 }

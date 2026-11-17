@@ -1,4 +1,3 @@
-
 import 'package:boundingbox/api/api_account.dart';
 import 'package:boundingbox/widgets/snackbars.dart';
 import 'package:flutter/material.dart';
@@ -9,15 +8,12 @@ class AppDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
           const DrawerHeader(
-            decoration: BoxDecoration(
-              color: Colors.blue,
-            ),
+            decoration: BoxDecoration(color: Colors.blue),
             child: Align(
               alignment: Alignment.bottomLeft,
               child: Text(
@@ -59,11 +55,15 @@ class AppDrawer extends StatelessWidget {
 
                 if (context.mounted) {
                   context.go('/login');
-                  ScaffoldMessenger.of(context).showSnackBar(snackBarInfo('Wylogowano pomyślnie.'));
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(snackBarInfo('Wylogowano pomyślnie.'));
                 }
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(snackBarError('Błąd: ${e.toString()}'));
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(snackBarError('Błąd: ${e.toString()}'));
                 }
               }
             },

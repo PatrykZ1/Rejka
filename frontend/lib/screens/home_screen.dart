@@ -8,20 +8,14 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(applicationName),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text(applicationName), centerTitle: true),
 
       drawer: const AppDrawer(),
 
       body: const Center(
         child: Text(
           applicationName,
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
         ),
       ),
     );

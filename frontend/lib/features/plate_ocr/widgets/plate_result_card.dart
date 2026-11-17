@@ -89,8 +89,7 @@ class PlateResultCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                if (hasPlate && region.isNotEmpty)
-                  const SizedBox(height: 2),
+                if (hasPlate && region.isNotEmpty) const SizedBox(height: 2),
                 Text(
                   hasPlate ? plateText : status,
                   style: TextStyle(
@@ -107,10 +106,7 @@ class PlateResultCard extends StatelessWidget {
                   hasPlate && region.isNotEmpty
                       ? 'Region: $region - $status'
                       : status,
-                  style: const TextStyle(
-                    color: Colors.white60,
-                    fontSize: 11,
-                  ),
+                  style: const TextStyle(color: Colors.white60, fontSize: 11),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),

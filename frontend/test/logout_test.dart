@@ -18,25 +18,25 @@ void main() {
     mockApiAccount = MockApiAccount();
     ApiAccount.mockInstance = mockApiAccount;
 
-    const MethodChannel channel = MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
-      channel,
-          (MethodCall methodCall) async {
-        final Map? args = methodCall.arguments as Map?;
-        switch (methodCall.method) {
-          case 'write':
-            fakeSecureStorage[args?['key']] = args?['value'];
-            return null;
-          case 'read':
-            return fakeSecureStorage[args?['key']];
-          case 'delete':
-            fakeSecureStorage.remove(args?['key']);
-            return null;
-          default:
-            return null;
-        }
-      },
+    const MethodChannel channel = MethodChannel(
+      'plugins.it_nomads.com/flutter_secure_storage',
     );
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+          final Map? args = methodCall.arguments as Map?;
+          switch (methodCall.method) {
+            case 'write':
+              fakeSecureStorage[args?['key']] = args?['value'];
+              return null;
+            case 'read':
+              return fakeSecureStorage[args?['key']];
+            case 'delete':
+              fakeSecureStorage.remove(args?['key']);
+              return null;
+            default:
+              return null;
+          }
+        });
     fakeSecureStorage.clear();
     ApiCore().saveRefreshToken('mock_refresh_token');
   });
@@ -46,12 +46,12 @@ void main() {
   });
 
   Widget createTestWidget() {
-    return MaterialApp.router(
-      routerConfig: router,
-    );
+    return MaterialApp.router(routerConfig: router);
   }
 
-  testWidgets('Successful logout navigates to login screen', (WidgetTester tester) async {
+  testWidgets('Successful logout navigates to login screen', (
+    WidgetTester tester,
+  ) async {
     when(() => mockApiAccount.logout()).thenAnswer((_) async {
       await ApiCore().removeTokens();
     });

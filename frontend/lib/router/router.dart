@@ -1,4 +1,3 @@
-
 import 'package:boundingbox/api/api_core.dart';
 import 'package:boundingbox/app/navigation_service.dart';
 import 'package:boundingbox/screens/login_screen.dart';
@@ -22,16 +21,12 @@ final GoRouter router = GoRouter(
     return null;
   },
   routes: [
+    GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
     GoRoute(
-      path: '/',
-      builder: (context, state) => const HomeScreen(),
-    ),
-    GoRoute(path: '/register',
+      path: '/register',
       builder: (context, state) => const RegisterScreen(),
     ),
-    GoRoute(path: '/login',
-      builder: (context, state) => const LoginScreen(),
-    ),
+    GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     GoRoute(
       path: '/detector',
       builder: (context, state) => const DetectorScreen(),
