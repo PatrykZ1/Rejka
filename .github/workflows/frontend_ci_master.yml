@@ -1,0 +1,59 @@
+name: Rejka Frontend CI - Master
+
+on:
+  push:
+    branches: ["master"]
+  
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  frontend-ci-main:
+    name: Rejka frontend CI
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Cache pub packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ hashFiles('frontend/pubspec.lock') }}
+          restore-keys: |
+            pub-${{ runner.os }}
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate build runner helper code
+        run: dart run build_runner build
+
+      - name: Check Dart formatting
+        run: dart format --set-exit-if-changed .
+
+      - name: Analyze project
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
