@@ -1,0 +1,31 @@
+name: Rejka Backend CI - Master
+
+on:
+  push:
+    branches: ["master"]
+
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  backend-ci-main:
+    name: Rejka backend CI - master
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build solution
+        run: dotnet build backend.sln --configuration Release
+
+      - name: Run tests
+        run: dotnet test backend.sln --configuration Release --no-build --no-restore
