@@ -17,9 +17,11 @@ class MediaDetailScreen extends StatefulWidget {
 }
 
 class _MediaDetailScreenState extends State<MediaDetailScreen> {
-  late Future<MediaItem> _mediaFuture;
+  late Future<MediaItem?> _mediaFuture;
 
   VideoPlayerController? _videoController;
+  String? _videoError;
+  String? _initializedVideoUrl;
 
   @override
   void initState() {
@@ -27,20 +29,32 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
     _mediaFuture = _fetchMedia();
   }
 
-  Future<MediaItem> _fetchMedia() async {
+  Future<MediaItem?> _fetchMedia() async {
     final response = await ApiMedia().getMediaItem(widget.mediaId);
+    if (response == null) {
+      return null;
+    }
     return MediaItem.fromResponse(response);
   }
 
   Future<void> _initializeVideo(String url) async {
-    final controller = VideoPlayerController.networkUrl(Uri.parse(url));
+    if (_initializedVideoUrl == url) return;
 
-    _videoController = controller;
+    try {
+      _initializedVideoUrl = url;
+      final controller = VideoPlayerController.networkUrl(Uri.parse(url))..initialize().then((_) {
+        if (mounted) {
+          setState(() {});
+        }
+      });
+      _videoController = controller;
 
-    await controller.initialize();
-
-    if (mounted) {
-      setState(() {});
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _videoError = 'Nie udało się wczytać nagrania.';
+        });
+      }
     }
   }
 
@@ -55,7 +69,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text(applicationName)),
       drawer: AppDrawer(),
-      body: FutureBuilder<MediaItem>(
+      body: FutureBuilder<MediaItem?>(
         future: _mediaFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -76,6 +90,8 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
                       setState(() {
                         _videoController?.dispose();
                         _videoController = null;
+                        _initializedVideoUrl = null;
+                        _videoError = null;
                         _mediaFuture = _fetchMedia();
                       });
                     },
@@ -90,6 +106,10 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
             return const Center(child: Text('Nie znaleziono szukanego pliku.'));
           }
 
+          if (snapshot.data == null) {
+            return const Center(child: Text('Szukany plik nie istnieje.'));
+          }
+
           return _buildMediaDetails(snapshot.data!);
         },
       ),
@@ -98,12 +118,8 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
 
   Widget _buildMediaDetails(MediaItem item) {
     final theme = Theme.of(context);
-    final extension = item.fileName.split('.').last.toLowerCase();
+    final extension = item.url.split('.').last.toLowerCase();
     final isVideo = ['mp4', 'mov', 'avi', 'mkv', 'webm'].contains(extension);
-
-    if (isVideo && _videoController == null) {
-      _initializeVideo(item.url);
-    }
 
     return SingleChildScrollView(
       child: Column(
@@ -118,10 +134,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
               children: [
                 Text('Plik:', style: theme.textTheme.labelSmall),
                 const SizedBox(height: 4),
-                Text(
-                  item.fileName,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
+                Text(item.fileName, style: theme.textTheme.headlineSmall),
 
                 const SizedBox(height: 16),
 
@@ -129,10 +142,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
 
                 const SizedBox(height: 24),
 
-                Text(
-                  'Rejestracje',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
+                Text('Rejestracje', style: theme.textTheme.titleLarge),
 
                 const SizedBox(height: 8),
 
@@ -147,9 +157,41 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
 
   Widget _buildMediaPreview(MediaItem item, bool isVideo) {
     if (isVideo) {
+
+      _initializeVideo(item.url);
       final controller = _videoController;
 
+      if (_videoError != null) {
+        return SizedBox(
+          height: 250,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, size: 48),
+                const SizedBox(height: 12),
+                Text(_videoError!),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _videoController?.dispose();
+                      _videoController = null;
+                      _initializedVideoUrl = null;
+                      _videoError = null;
+                    });
+
+                    _initializeVideo(item.url);
+                  },
+                  child: const Text('Spróbuj ponownie'),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
       if (controller == null || !controller.value.isInitialized) {
+        print(controller);
         return const AspectRatio(
           aspectRatio: 16 / 9,
           child: Center(child: CircularProgressIndicator()),
@@ -162,6 +204,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
           alignment: Alignment.center,
           children: [
             VideoPlayer(controller),
+
             IconButton(
               iconSize: 64,
               color: Colors.white,
@@ -171,11 +214,12 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
                     : Icons.play_circle,
               ),
               onPressed: () {
-                setState(() {
-                  controller.value.isPlaying
-                      ? controller.pause()
-                      : controller.play();
-                });
+                if (controller.value.isPlaying) {
+                  controller.pause();
+                } else {
+                  controller.play();
+                }
+                setState(() {});
               },
             ),
           ],
@@ -187,17 +231,27 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
       item.url,
       width: double.infinity,
       fit: BoxFit.contain,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+
+        return const SizedBox(
+          height: 250,
+          child: Center(child: CircularProgressIndicator()),
+        );
+      },
       errorBuilder: (context, error, stackTrace) {
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              height: 250,
-              child: Center(child: Icon(Icons.broken_image, size: 64)),
+        return const SizedBox(
+          height: 250,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.broken_image, size: 64),
+                SizedBox(height: 16),
+                Text('Nie udało się wczytać obrazu.'),
+              ],
             ),
-            const SizedBox(height: 16),
-            const Text('Nie udało się wczytać obrazu.'),
-          ],
+          ),
         );
       },
     );
@@ -205,18 +259,15 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
 
   Widget _buildInfoSection(MediaItem item) {
     final formatter = DateFormat.yMMMMd('pl_PL').add_Hms();
+
     return Column(
       children: [
         _buildInfoTile(
           'Położenie',
           Row(
             children: [
-              Expanded(
-                child: Center(child: Text('${item.latitude.toString()}°')),
-              ),
-              Expanded(
-                child: Center(child: Text('${item.longitude.toString()}°')),
-              ),
+              Expanded(child: Center(child: Text('${item.latitude}°'))),
+              Expanded(child: Center(child: Text('${item.longitude}°'))),
             ],
           ),
         ),
