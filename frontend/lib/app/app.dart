@@ -1,6 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 
-import '../router/router.dart';
+import 'router.dart';
 import 'theme.dart';
 
 class BoundingBoxApp extends StatelessWidget {

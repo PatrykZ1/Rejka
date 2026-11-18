@@ -2,7 +2,7 @@ import 'package:boundingbox/api/api_account.dart';
 import 'package:boundingbox/api/api_core.dart';
 import 'package:boundingbox/api/models/response/login_response.dart';
 import 'package:boundingbox/constants.dart';
-import 'package:boundingbox/router/router.dart';
+import 'package:boundingbox/app/router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';

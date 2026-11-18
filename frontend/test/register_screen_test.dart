@@ -1,5 +1,5 @@
 import 'package:boundingbox/api/api_account.dart';
-import 'package:boundingbox/router/router.dart';
+import 'package:boundingbox/app/router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
