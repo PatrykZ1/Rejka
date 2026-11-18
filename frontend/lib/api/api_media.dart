@@ -125,7 +125,7 @@ class ApiMedia {
       id: 7,
       userId: 0,
       url:
-      'https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fi.ytimg.com%2Fvi%2FLqQ2QvX-KIs%2Fmaxresdefault.jpg&f=1&nofb=1&ipt=1052b4d968c2b67794c74bccbab4886c8bfa0d1e2437434a32e0d29922a4771f&ipo=images',
+          'https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fi.ytimg.com%2Fvi%2FLqQ2QvX-KIs%2Fmaxresdefault.jpg&f=1&nofb=1&ipt=1052b4d968c2b67794c74bccbab4886c8bfa0d1e2437434a32e0d29922a4771f&ipo=images',
       fileName: 'samochody.jpg',
       latitude: 51,
       longitude: 19,
@@ -133,15 +133,12 @@ class ApiMedia {
       uploadedAt: DateTime.now().subtract(Duration(days: 2)),
       comment: 'Samochody na ulicy.',
       registrations: ['SZO45T5', 'SK753LU'],
-      ratings: [
-        RegistrationRatingResponse(registration: 'SZO45T5', rating: 7),
-      ],
+      ratings: [RegistrationRatingResponse(registration: 'SZO45T5', rating: 7)],
     ),
     8: MediaItemResponse(
       id: 8,
       userId: 0,
-      url:
-      'https://wallpapercave.com/wp/wp2425363.jpg',
+      url: 'https://wallpapercave.com/wp/wp2425363.jpg',
       fileName: 'pagani-zonda.jpg',
       latitude: 45,
       longitude: 10,
@@ -149,15 +146,12 @@ class ApiMedia {
       uploadedAt: DateTime.now().subtract(Duration(days: 2)),
       comment: 'Eleganckie włoskie Pagani Zonda.',
       registrations: ['E0ZONDA'],
-      ratings: [
-        RegistrationRatingResponse(registration: 'E0ZONDA', rating: 7),
-      ],
+      ratings: [RegistrationRatingResponse(registration: 'E0ZONDA', rating: 7)],
     ),
     9: MediaItemResponse(
       id: 9,
       userId: 0,
-      url:
-      'https://wallpapercave.com/wp/wp2425380.jpg',
+      url: 'https://wallpapercave.com/wp/wp2425380.jpg',
       fileName: 'mclaren.jpg',
       latitude: 37,
       longitude: -110,
@@ -165,15 +159,12 @@ class ApiMedia {
       uploadedAt: DateTime.now().subtract(Duration(days: 2)),
       comment: 'Amerykańska maszyna wolna niczym orzeł.',
       registrations: ['TX001MC'],
-      ratings: [
-        RegistrationRatingResponse(registration: 'TX001MC', rating: 6),
-      ],
+      ratings: [RegistrationRatingResponse(registration: 'TX001MC', rating: 6)],
     ),
     10: MediaItemResponse(
       id: 10,
       userId: 0,
-      url:
-      'https://wallpapercave.com/wp/wp2425387.jpg',
+      url: 'https://wallpapercave.com/wp/wp2425387.jpg',
       fileName: 'lambo.jpg',
       latitude: 37,
       longitude: -110,
@@ -181,9 +172,7 @@ class ApiMedia {
       uploadedAt: DateTime.now().subtract(Duration(days: 2)),
       comment: 'Żółte Lamborgini.',
       registrations: ['WI86767'],
-      ratings: [
-        RegistrationRatingResponse(registration: 'WI86767', rating: 8),
-      ],
+      ratings: [RegistrationRatingResponse(registration: 'WI86767', rating: 8)],
     ),
   };
 
