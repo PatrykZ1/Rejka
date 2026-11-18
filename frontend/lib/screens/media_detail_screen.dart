@@ -188,9 +188,16 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
       width: double.infinity,
       fit: BoxFit.contain,
       errorBuilder: (context, error, stackTrace) {
-        return const SizedBox(
-          height: 250,
-          child: Center(child: Icon(Icons.broken_image, size: 64)),
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              height: 250,
+              child: Center(child: Icon(Icons.broken_image, size: 64)),
+            ),
+            const SizedBox(height: 16),
+            const Text('Nie udało się wczytać obrazu.'),
+          ],
         );
       },
     );
@@ -204,8 +211,12 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
           'Położenie',
           Row(
             children: [
-              Expanded(child: Center(child: Text('${item.latitude.toString()}°'))),
-              Expanded(child: Center(child: Text('${item.longitude.toString()}°'))),
+              Expanded(
+                child: Center(child: Text('${item.latitude.toString()}°')),
+              ),
+              Expanded(
+                child: Center(child: Text('${item.longitude.toString()}°')),
+              ),
             ],
           ),
         ),
@@ -244,7 +255,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
                   avatar: const Icon(Icons.star, color: Colors.amber, size: 18),
                   label: Text(rating.rating.toString()),
                 )
-              : const Text('No rating', style: TextStyle(color: Colors.grey)),
+              : const Text('Brak oceny.', style: TextStyle(color: Colors.grey)),
         );
       }).toList(),
     );

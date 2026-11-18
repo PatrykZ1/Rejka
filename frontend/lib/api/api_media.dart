@@ -21,17 +21,19 @@ class ApiMedia {
     return MediaItemResponse(
       id: id,
       userId: 0,
-      url: 'asdf',
-      fileName: 'asdf',
+      url:
+          'https://a.allegroimg.com/s720/110df3/d3ba2a364210b098bfb06c2a744f/Obraz-na-plotnie-Samochod-BMW-3-M3-E30-E-30-320-318-325-316-Auto-Grafika',
+      fileName: 'super-fajne-auto.jpg',
       latitude: 21,
       longitude: 37,
       recordedAt: DateTime.now(),
       uploadedAt: DateTime.now().subtract(Duration(days: 2)),
-      comment: 'asdf',
-      registrations: ['asdf', 'qwer', 'zxcv'],
+      comment:
+          'Spod tamtego drzewa holowałem Renatkę w 96. aż do Suchowoli! To były czasy. A teraz co mamy? Pizzę Książula i kaucję.',
+      registrations: ['WX456CJ', 'XD2137G', 'BI170EG'],
       ratings: [
-        RegistrationRatingResponse(registration: 'asdf', rating: 5),
-        RegistrationRatingResponse(registration: 'qwer', rating: 9),
+        RegistrationRatingResponse(registration: 'BI170EG', rating: 5),
+        RegistrationRatingResponse(registration: 'XD2137G', rating: 10),
       ],
     );
   }
