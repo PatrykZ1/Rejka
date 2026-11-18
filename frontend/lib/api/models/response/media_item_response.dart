@@ -1,5 +1,4 @@
 import 'package:boundingbox/api/models/response/registration_rating_response.dart';
-import 'package:boundingbox/models/registration_rating.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'media_item_response.g.dart';

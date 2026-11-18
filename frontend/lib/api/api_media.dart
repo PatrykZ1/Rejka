@@ -1,6 +1,3 @@
-import 'dart:io';
-
-import 'package:boundingbox/api/api_core.dart';
 import 'package:boundingbox/api/models/response/media_item_response.dart';
 import 'package:boundingbox/api/models/response/registration_rating_response.dart';
 
@@ -14,7 +11,7 @@ class ApiMedia {
   }
   ApiMedia._internal();
 
-  final ApiCore _api = ApiCore();
+  //final ApiCore _api = ApiCore();
 
   Future<MediaItemResponse> getMediaItem(int id) async {
     await Future.delayed(const Duration(milliseconds: 500));
