@@ -42,13 +42,13 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
 
     try {
       _initializedVideoUrl = url;
-      final controller = VideoPlayerController.networkUrl(Uri.parse(url))..initialize().then((_) {
-        if (mounted) {
-          setState(() {});
-        }
-      });
+      final controller = VideoPlayerController.networkUrl(Uri.parse(url))
+        ..initialize().then((_) {
+          if (mounted) {
+            setState(() {});
+          }
+        });
       _videoController = controller;
-
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -157,7 +157,6 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
 
   Widget _buildMediaPreview(MediaItem item, bool isVideo) {
     if (isVideo) {
-
       _initializeVideo(item.url);
       final controller = _videoController;
 
@@ -191,7 +190,6 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
       }
 
       if (controller == null || !controller.value.isInitialized) {
-        print(controller);
         return const AspectRatio(
           aspectRatio: 16 / 9,
           child: Center(child: CircularProgressIndicator()),
