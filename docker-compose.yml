@@ -21,6 +21,18 @@ services:
     networks:
       - rejka-local
 
+  blob:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    container_name: rejka-blob
+    restart: unless-stopped
+    ports:
+      - "10000:10000"
+    command: "azurite-blob --blobHost 0.0.0.0 --blobPort 10000"
+    volumes:
+      - rejka-blob-data:/data
+    networks:
+      - rejka-local
+
   api:
     build:
       context: ./backend
@@ -36,11 +48,15 @@ services:
       - Authentication__Jwt__Issuer=RejkaApi
       - Authentication__Jwt__Audience=RejkaApp
       - Authentication__Jwt__SigningKey=dGhpc19pc19hX3Zlcnlfc3Ryb25nX3NlY3JldF9rZXlfZm9yX2p3dF90b2tlbl8yNTZiaXRzIQ==
+      - BlobStorage__ConnectionString=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://blob:10000/devstoreaccount1;
+      - BlobStorage__ContainerName=rejka-media
     networks:
       - rejka-local
     depends_on:
       db:
         condition: service_healthy
+      blob:
+        condition: service_started
 
   frontend:
     build:
@@ -60,3 +76,4 @@ networks:
 
 volumes:
   rejka-db-data:
+  rejka-blob-data:
