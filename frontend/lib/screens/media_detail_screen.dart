@@ -68,7 +68,6 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text(applicationName)),
-      drawer: AppDrawer(),
       body: FutureBuilder<MediaItem?>(
         future: _mediaFuture,
         builder: (context, snapshot) {

@@ -3,6 +3,7 @@ import 'package:boundingbox/app/navigation_service.dart';
 import 'package:boundingbox/screens/blank_screen.dart';
 import 'package:boundingbox/screens/login_screen.dart';
 import 'package:boundingbox/screens/media_detail_screen.dart';
+import 'package:boundingbox/screens/media_list_screen.dart';
 import 'package:boundingbox/screens/register_screen.dart';
 import 'package:go_router/go_router.dart';
 
@@ -35,6 +36,10 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/detector',
       builder: (context, state) => const DetectorScreen(),
+    ),
+    GoRoute(
+      path: '/media',
+      builder: (context, state) => const MediaListScreen(),
     ),
     GoRoute(
       path: '/media/:mediaId',

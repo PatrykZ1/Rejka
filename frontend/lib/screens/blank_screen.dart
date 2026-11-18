@@ -12,7 +12,13 @@ class BlankScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text(applicationName), centerTitle: true),
       drawer: AppDrawer(),
-      body: Center(child: Text(message)),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [Icon(Icons.error), SizedBox(height: 8), Text(message)],
+        ),
+      ),
     );
   }
 }
