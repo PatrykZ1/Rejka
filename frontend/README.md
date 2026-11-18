@@ -19,6 +19,10 @@ then compile android application with
 ```
 flutter build apk --release
 ```
+for master version of application (working with azure db) run:
+```
+flutter build apk --release -t lib/main_release.dart
+```
 
 ## Getting Started
 
