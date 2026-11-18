@@ -1,6 +1,8 @@
 import 'package:boundingbox/api/api_core.dart';
 import 'package:boundingbox/app/navigation_service.dart';
+import 'package:boundingbox/screens/blank_screen.dart';
 import 'package:boundingbox/screens/login_screen.dart';
+import 'package:boundingbox/screens/media_detail_screen.dart';
 import 'package:boundingbox/screens/register_screen.dart';
 import 'package:go_router/go_router.dart';
 
@@ -20,6 +22,9 @@ final GoRouter router = GoRouter(
     }
     return null;
   },
+  errorBuilder: (context, state) {
+    return BlankScreen(message: 'Strona ${state.path} jest błędna.');
+  },
   routes: [
     GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
     GoRoute(
@@ -30,6 +35,12 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/detector',
       builder: (context, state) => const DetectorScreen(),
+    ),
+    GoRoute(
+      path: '/media/:mediaId',
+      builder: (context, state) => MediaDetailScreen(
+        mediaId: int.parse(state.pathParameters['mediaId']!),
+      ),
     ),
   ],
 );

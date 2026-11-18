@@ -46,6 +46,15 @@ class AppDrawer extends StatelessWidget {
           ),
 
           ListTile(
+            leading: const Icon(Icons.sensors),
+            title: const Text('Strona media'),
+            onTap: () {
+              Navigator.pop(context);
+              context.go('/media/0');
+            },
+          ),
+
+          ListTile(
             leading: const Icon(Icons.logout),
             title: const Text('Wyloguj się'),
             onTap: () async {
