@@ -1,4 +1,5 @@
-
+import 'package:boundingbox/api/api_account.dart';
+import 'package:boundingbox/widgets/snackbars.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,15 +8,12 @@ class AppDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
           const DrawerHeader(
-            decoration: BoxDecoration(
-              color: Colors.blue,
-            ),
+            decoration: BoxDecoration(color: Colors.blue),
             child: Align(
               alignment: Alignment.bottomLeft,
               child: Text(
@@ -44,6 +42,39 @@ class AppDrawer extends StatelessWidget {
             onTap: () {
               Navigator.pop(context);
               context.go('/detector');
+            },
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.sensors),
+            title: const Text('Twoje media'),
+            onTap: () {
+              Navigator.pop(context);
+              context.go('/media');
+            },
+          ),
+
+          ListTile(
+            leading: const Icon(Icons.logout),
+            title: const Text('Wyloguj się'),
+            onTap: () async {
+              try {
+                final api = ApiAccount();
+                await api.logout();
+
+                if (context.mounted) {
+                  context.go('/login');
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(snackBarInfo('Wylogowano pomyślnie.'));
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(snackBarError('Błąd: ${e.toString()}'));
+                }
+              }
             },
           ),
         ],

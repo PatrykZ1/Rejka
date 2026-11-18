@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ultralytics_yolo/ultralytics_yolo.dart';
 
-import '../features/drawer.dart';
+import '../widgets/drawer.dart';
 import '../features/plate_ocr/models/tracked_plate.dart';
 import '../features/plate_ocr/services/plate_pipeline.dart';
 import '../features/plate_ocr/widgets/plate_overlay.dart';
@@ -37,8 +37,9 @@ class _DetectorScreenState extends State<DetectorScreen> {
         if (!mounted) return;
         setState(() {
           tracks = updated;
-          final withText =
-              updated.where((t) => t.hasText).toList(growable: false);
+          final withText = updated
+              .where((t) => t.hasText)
+              .toList(growable: false);
           if (withText.isNotEmpty) {
             withText.sort((a, b) => b.lastSeen.compareTo(a.lastSeen));
             plateText = withText.first.text;
@@ -80,15 +81,19 @@ class _DetectorScreenState extends State<DetectorScreen> {
     setState(() {
       plateText = '';
       plateRegion = '';
-      tracks = List<TrackedPlate>.from(tracks
-          .map((t) => t.copyWith(
+      tracks = List<TrackedPlate>.from(
+        tracks
+            .map(
+              (t) => t.copyWith(
                 text: '',
                 region: '',
                 serial: '',
                 reading: false,
                 ocrInFlight: false,
-              ))
-          .toList(growable: false));
+              ),
+            )
+            .toList(growable: false),
+      );
     });
   }
 
@@ -113,7 +118,9 @@ class _DetectorScreenState extends State<DetectorScreen> {
               debugPrint('YOLO MODEL LOADED: $modelPath task=$task');
             },
             onModelError: (Object error, String modelPath, YOLOTask? task) {
-              debugPrint('YOLO MODEL ERROR: $error model=$modelPath task=$task');
+              debugPrint(
+                'YOLO MODEL ERROR: $error model=$modelPath task=$task',
+              );
             },
             onResult: _handleResults,
             onPerformanceMetrics: (metrics) {
@@ -129,10 +136,7 @@ class _DetectorScreenState extends State<DetectorScreen> {
                 color: Colors.black54,
                 shape: const CircleBorder(),
                 child: IconButton(
-                  icon: const Icon(
-                    Icons.menu,
-                    color: Colors.white,
-                  ),
+                  icon: const Icon(Icons.menu, color: Colors.white),
                   onPressed: () {
                     Scaffold.of(context).openDrawer();
                   },
@@ -155,9 +159,7 @@ class _DetectorScreenState extends State<DetectorScreen> {
             Positioned.fill(
               child: Padding(
                 padding: const EdgeInsets.only(top: 96),
-                child: PlateOverlay(
-                  tracks: tracks,
-                ),
+                child: PlateOverlay(tracks: tracks),
               ),
             ),
           Positioned(

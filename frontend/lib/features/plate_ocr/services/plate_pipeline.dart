@@ -19,7 +19,7 @@ class PlatePipeline {
     this.maxTracks = 8,
     this.matchIou = 0.30,
     this.trackTtl = const Duration(milliseconds: 1000),
-    this.ocrCooldown = const Duration(milliseconds: 1000),
+    this.ocrCooldown = const Duration(milliseconds: 100),
     this.ocrVotesRequired = 2,
     this.ocrMaxAttempts = 8,
     required Future<Uint8List?> Function() captureFrame,

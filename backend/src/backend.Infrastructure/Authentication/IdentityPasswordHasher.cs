@@ -5,15 +5,10 @@ using Microsoft.Extensions.Options;
 
 namespace backend.Infrastructure.Authentication;
 
-public sealed class IdentityPasswordHasher : IPasswordHasher
+public sealed class IdentityPasswordHasher(IOptions<PasswordHasherOptions> options) : IPasswordHasher
 {
-    private readonly PasswordHasher<object> _passwordHasher;
+    private readonly PasswordHasher<object> _passwordHasher = new PasswordHasher<object>(options);
     private static readonly object User = new();
-
-    public IdentityPasswordHasher(IOptions<PasswordHasherOptions> options)
-    {
-        _passwordHasher = new PasswordHasher<object>(options);
-    }
 
     public string Hash(string password)
     {

@@ -1,0 +1,38 @@
+# boundingbox
+
+A new Flutter project.
+
+### Building and compiling
+
+First clean builds and get packages:
+```
+flutter pub clean
+flutter pub get
+```
+
+Then run build_runner to generate needed helper files:
+```
+dart run build_runner build
+```
+
+then compile android application with
+```
+flutter build apk --release
+```
+for master version of application (working with azure db) run:
+```
+flutter build apk --release -t lib/main_release.dart
+```
+
+## Getting Started
+
+This project is a starting point for a Flutter application.
+
+A few resources to get you started if this is your first Flutter project:
+
+- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
+- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+
+For help getting started with Flutter development, view the
+[online documentation](https://docs.flutter.dev/), which offers tutorials,
+samples, guidance on mobile development, and a full API reference.

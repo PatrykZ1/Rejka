@@ -1,6 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 
-import '../router/router.dart';
+import 'router.dart';
 import 'theme.dart';
 
 class BoundingBoxApp extends StatelessWidget {
@@ -10,7 +10,7 @@ class BoundingBoxApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      title: 'License Plate Detector',
+      title: 'Rejka',
       theme: AppTheme.dark,
       routerConfig: router,
     );

@@ -36,6 +36,31 @@ public sealed class User
         CreatedAt = createdAt;
     }
 
+    public User(
+        int id,
+        string username,
+        string email,
+        string normalizedEmail,
+        string passwordHash,
+        UserState state,
+        DateTimeOffset createdAt,
+        DateTimeOffset? deletedAt)
+    {
+        Id = id;
+        Username = username;
+        Email = email;
+        NormalizedEmail = normalizedEmail;
+        PasswordHash = passwordHash;
+        State = state;
+        CreatedAt = createdAt;
+        DeletedAt = deletedAt;
+    }
+
+    public void SetId(int id)
+    {
+        Id = id;
+    }
+
     public bool ChangeState(UserState newState, DateTimeOffset changedAt)
     {
         if (!CanTransitionTo(newState))
