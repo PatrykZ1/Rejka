@@ -20,13 +20,19 @@ class ApiAccount {
 
   final ApiCore _api = ApiCore();
 
-  Future<void> register({required String username, required String email, required String password}) async {
+  Future<void> register({
+    required String username,
+    required String email,
+    required String password,
+  }) async {
     try {
       final request = RegisterRequest(
-          username: username, email: email, password: password);
+        username: username,
+        email: email,
+        password: password,
+      );
       await _api.post(apiUrlRegister, data: request);
-
-    } on DioException catch(e) {
+    } on DioException catch (e) {
       switch (e.response?.statusCode) {
         case 400:
           {
@@ -36,14 +42,18 @@ class ApiAccount {
           {
             throw ApiResponseException('Adres email jest już zarejestrowany.');
           }
-        default: {
-          throw ApiResponseException('Nieznany błąd.');
-        }
+        default:
+          {
+            throw ApiResponseException('Nieznany błąd.');
+          }
       }
     }
   }
 
-  Future<LoginResponse> login({required String email, required String password}) async {
+  Future<LoginResponse> login({
+    required String email,
+    required String password,
+  }) async {
     try {
       final request = LoginRequest(email: email, password: password);
       final response = await _api.post(apiUrlLogin, data: request);
@@ -53,12 +63,13 @@ class ApiAccount {
       _api.saveRefreshToken(loginResponse.refreshToken);
 
       return loginResponse;
-
-    } on DioException catch(e) {
+    } on DioException catch (e) {
       switch (e.response?.statusCode) {
         case 400:
           {
-            throw ApiResponseException('Brakujące lub nieprawidłowe dane żądania.');
+            throw ApiResponseException(
+              'Brakujące lub nieprawidłowe dane żądania.',
+            );
           }
         case 401:
           {
@@ -66,11 +77,14 @@ class ApiAccount {
           }
         case 403:
           {
-            throw ApiResponseException('Użytkownik został zablokowany lub usunięty.');
+            throw ApiResponseException(
+              'Użytkownik został zablokowany lub usunięty.',
+            );
           }
-        default: {
-          throw ApiResponseException('Nieznany błąd.');
-        }
+        default:
+          {
+            throw ApiResponseException('Nieznany błąd.');
+          }
       }
     }
   }
@@ -85,8 +99,7 @@ class ApiAccount {
       }
 
       await _api.removeTokens();
-
-    } on DioException catch(e) {
+    } on DioException catch (e) {
       switch (e.response?.statusCode) {
         case 401:
           {
@@ -96,9 +109,10 @@ class ApiAccount {
           {
             throw ApiResponseException('Brak uprawnień.');
           }
-        default: {
-          throw ApiResponseException('Nieznany błąd.');
-        }
+        default:
+          {
+            throw ApiResponseException('Nieznany błąd.');
+          }
       }
     }
   }

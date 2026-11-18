@@ -19,25 +19,25 @@ void main() {
     mockApiAccount = MockApiAccount();
     ApiAccount.mockInstance = mockApiAccount;
 
-    const MethodChannel channel = MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
-      channel,
-          (MethodCall methodCall) async {
-        final Map? args = methodCall.arguments as Map?;
-        switch (methodCall.method) {
-          case 'write':
-            fakeSecureStorage[args?['key']] = args?['value'];
-            return null;
-          case 'read':
-            return fakeSecureStorage[args?['key']];
-          case 'delete':
-            fakeSecureStorage.remove(args?['key']);
-            return null;
-          default:
-            return null;
-        }
-      },
+    const MethodChannel channel = MethodChannel(
+      'plugins.it_nomads.com/flutter_secure_storage',
     );
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+          final Map? args = methodCall.arguments as Map?;
+          switch (methodCall.method) {
+            case 'write':
+              fakeSecureStorage[args?['key']] = args?['value'];
+              return null;
+            case 'read':
+              return fakeSecureStorage[args?['key']];
+            case 'delete':
+              fakeSecureStorage.remove(args?['key']);
+              return null;
+            default:
+              return null;
+          }
+        });
     fakeSecureStorage.clear();
   });
 
@@ -46,12 +46,12 @@ void main() {
   });
 
   Widget createTestWidget() {
-    return MaterialApp.router(
-      routerConfig: router,
-    );
+    return MaterialApp.router(routerConfig: router);
   }
 
-  testWidgets('Login screen displays correctly and validates empty fields', (WidgetTester tester) async {
+  testWidgets('Login screen displays correctly and validates empty fields', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(createTestWidget());
 
     router.go('/login');
@@ -67,44 +67,59 @@ void main() {
     expect(find.text('Wpisz hasło'), findsOneWidget);
   });
 
-  testWidgets('Screen change when no refresh token is saved results in redirection to login screen', (WidgetTester tester) async {
-    await tester.pumpWidget(createTestWidget());
+  testWidgets(
+    'Screen change when no refresh token is saved results in redirection to login screen',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(createTestWidget());
 
-    router.go('/login');
-    await tester.pumpAndSettle();
+      router.go('/login');
+      await tester.pumpAndSettle();
 
-    router.go('/');
-    await tester.pumpAndSettle();
+      router.go('/');
+      await tester.pumpAndSettle();
 
-    expect(find.text('Zaloguj się'), findsOneWidget);
-  });
+      expect(find.text('Zaloguj się'), findsOneWidget);
+    },
+  );
 
-  testWidgets('Register screen is available (no automatic redirection to login screen)', (WidgetTester tester) async {
-    await tester.pumpWidget(createTestWidget());
+  testWidgets(
+    'Register screen is available (no automatic redirection to login screen)',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(createTestWidget());
 
-    router.go('/login');
-    await tester.pumpAndSettle();
+      router.go('/login');
+      await tester.pumpAndSettle();
 
-    router.go('/register');
-    await tester.pumpAndSettle();
+      router.go('/register');
+      await tester.pumpAndSettle();
 
-    expect(find.text('Załóż konto'), findsOneWidget);
-  });
+      expect(find.text('Załóż konto'), findsOneWidget);
+    },
+  );
 
-  testWidgets('Login screen automatically redirects to home screen if token available', (WidgetTester tester) async {
-    await ApiCore().saveRefreshToken('mock_refresh_token');
-    await tester.pumpWidget(createTestWidget());
+  testWidgets(
+    'Login screen automatically redirects to home screen if token available',
+    (WidgetTester tester) async {
+      await ApiCore().saveRefreshToken('mock_refresh_token');
+      await tester.pumpWidget(createTestWidget());
 
-    router.go('/login');
-    await tester.pumpAndSettle();
+      router.go('/login');
+      await tester.pumpAndSettle();
 
-    expect(find.text(applicationName), findsExactly(2));
-  });
+      expect(find.text(applicationName), findsExactly(2));
+    },
+  );
 
-  testWidgets('Login screen successful login navigates to home', (WidgetTester tester) async {
-    when(() => mockApiAccount.login(email: 'tadeusz.norek@mpwik.com.pl', password: 'k0cham_k@naly'))
-        .thenAnswer((_) async {
-          await ApiCore().saveRefreshToken('mock_refresh_token');
+  testWidgets('Login screen successful login navigates to home', (
+    WidgetTester tester,
+  ) async {
+    when(
+      () => mockApiAccount.login(
+        email: 'tadeusz.norek@mpwik.com.pl',
+        password: 'k0cham_k@naly',
+      ),
+    ).thenAnswer((_) async {
+      await ApiCore().saveRefreshToken('mock_refresh_token');
       return LoginResponse(accessToken: 'access', refreshToken: 'refresh');
     });
 
@@ -112,7 +127,10 @@ void main() {
     router.go('/login');
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextFormField).at(0), 'tadeusz.norek@mpwik.com.pl');
+    await tester.enterText(
+      find.byType(TextFormField).at(0),
+      'tadeusz.norek@mpwik.com.pl',
+    );
     await tester.enterText(find.byType(TextFormField).at(1), 'k0cham_k@naly');
     await tester.pump();
 

@@ -35,19 +35,19 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = passwordController.text;
 
     try {
-      await api.login(
-        email: email,
-        password: password,
-      );
+      await api.login(email: email, password: password);
 
       if (context.mounted) {
         context.go('/');
-        ScaffoldMessenger.of(context).showSnackBar(snackBarInfo('Zalogowano pomyślnie'));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(snackBarInfo('Zalogowano pomyślnie'));
       }
-
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(snackBarError('Błąd: ${e.toString()}'));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(snackBarError('Błąd: ${e.toString()}'));
       }
     }
   }
@@ -55,10 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(applicationName),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text(applicationName), centerTitle: true),
 
       body: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -69,10 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               const Text(
                 'Zaloguj się',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
 
               const SizedBox(height: 30),
@@ -124,16 +118,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 height: 50,
                 child: ElevatedButton(
                   onPressed: () => login(context),
-                  child: const Text(
-                    'Zaloguj',
-                    style: TextStyle(fontSize: 18),
-                  ),
+                  child: const Text('Zaloguj', style: TextStyle(fontSize: 18)),
                 ),
               ),
 
               const SizedBox(height: 20),
 
-              TextButton(onPressed: () => context.go('/register'), child: Text('Zarejestruj nowe konto'))
+              TextButton(
+                onPressed: () => context.go('/register'),
+                child: Text('Zarejestruj nowe konto'),
+              ),
             ],
           ),
         ),

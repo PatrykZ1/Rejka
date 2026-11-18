@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:boundingbox/api/models/request/refresh_request.dart';
 import 'package:boundingbox/app/navigation_service.dart';
 import 'package:boundingbox/constants.dart';
@@ -28,29 +26,29 @@ class ApiCore {
 
     _dio.interceptors.add(
       InterceptorsWrapper(
-          onRequest: (options, handler) async {
-            if (await isToken()) {
-              final token = await getToken(key: _accessTokenKey);
-              options.headers['Authorization'] = 'Bearer $token';
-            }
-            return handler.next(options);
-          },
-          // If unauthorized then try to refresh JWT token
-          onResponse: (response, handler) async {
-            if (response.statusCode == 401) {
-              try {
-                await refresh();
-              } catch (e) {
-                // If refresh unsuccessful then reroute to login screen
-                final context = NavigationService.navigatorKey.currentContext;
-                if (context != null && context.mounted) {
-                  context.go('/login');
-                }
+        onRequest: (options, handler) async {
+          if (await isToken()) {
+            final token = await getToken(key: _accessTokenKey);
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          return handler.next(options);
+        },
+        // If unauthorized then try to refresh JWT token
+        onResponse: (response, handler) async {
+          if (response.statusCode == 401) {
+            try {
+              await refresh();
+            } catch (e) {
+              // If refresh unsuccessful then reroute to login screen
+              final context = NavigationService.navigatorKey.currentContext;
+              if (context != null && context.mounted) {
+                context.go('/login');
               }
             }
-
-            handler.next(response);
           }
+
+          handler.next(response);
+        },
       ),
     );
   }
@@ -69,25 +67,33 @@ class ApiCore {
   Future<void> saveToken({required String key, required String token}) async {
     await _storage.write(key: key, value: token);
   }
+
   Future<String?> getToken({required String key}) async {
     return await _storage.read(key: key);
   }
+
   Future<void> removeToken({required String key}) async {
     await _storage.delete(key: key);
   }
 
-  Future<void> saveAccessToken(String token) async => await saveToken(key: _accessTokenKey, token: token);
-  Future<void> saveRefreshToken(String token) async => await saveToken(key: _refreshTokenKey, token: token);
-  Future<String?> getRefreshToken() async => await getToken(key: _refreshTokenKey);
+  Future<void> saveAccessToken(String token) async =>
+      await saveToken(key: _accessTokenKey, token: token);
+  Future<void> saveRefreshToken(String token) async =>
+      await saveToken(key: _refreshTokenKey, token: token);
+  Future<String?> getRefreshToken() async =>
+      await getToken(key: _refreshTokenKey);
   Future<void> removeTokens() async {
     await removeToken(key: _accessTokenKey);
     await removeToken(key: _refreshTokenKey);
   }
 
-  Future<Response> get(String path, {Map<String, dynamic>? queryParameters}) async {
+  Future<Response> get(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
     try {
       return await _dio.get(path, queryParameters: queryParameters);
-    } on DioException catch(e) {
+    } on DioException catch (e) {
       if (e.type == DioExceptionType.badResponse) {
         rethrow;
       }
@@ -95,10 +101,18 @@ class ApiCore {
     }
   }
 
-  Future<Response> post(String path, {Map<String, dynamic>? queryParameters, dynamic data}) async {
+  Future<Response> post(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    dynamic data,
+  }) async {
     try {
-      return await _dio.post(path, queryParameters: queryParameters, data: data);
-    } on DioException catch(e) {
+      return await _dio.post(
+        path,
+        queryParameters: queryParameters,
+        data: data,
+      );
+    } on DioException catch (e) {
       if (e.type == DioExceptionType.badResponse) {
         rethrow;
       }
@@ -106,10 +120,18 @@ class ApiCore {
     }
   }
 
-  Future<Response> patch(String path, {Map<String, dynamic>? queryParameters, dynamic data}) async {
+  Future<Response> patch(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    dynamic data,
+  }) async {
     try {
-      return await _dio.patch(path, queryParameters: queryParameters, data: data);
-    } on DioException catch(e) {
+      return await _dio.patch(
+        path,
+        queryParameters: queryParameters,
+        data: data,
+      );
+    } on DioException catch (e) {
       if (e.type == DioExceptionType.badResponse) {
         rethrow;
       }
@@ -117,10 +139,18 @@ class ApiCore {
     }
   }
 
-  Future<Response> delete(String path, {Map<String, dynamic>? queryParameters, dynamic data}) async {
+  Future<Response> delete(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    dynamic data,
+  }) async {
     try {
-      return await _dio.delete(path, queryParameters: queryParameters, data: data);
-    } on DioException catch(e) {
+      return await _dio.delete(
+        path,
+        queryParameters: queryParameters,
+        data: data,
+      );
+    } on DioException catch (e) {
       if (e.type == DioExceptionType.badResponse) {
         rethrow;
       }
@@ -141,18 +171,20 @@ class ApiCore {
       saveAccessToken(tokenResponse.accessToken);
       saveRefreshToken(tokenResponse.refreshToken);
       return;
-
     } on DioException catch (e) {
-      switch(e.response?.statusCode) {
-        case 400: {
-          throw ApiResponseException('Błędne żądanie odświeżenia tokenu.');
-        }
-        case 401: {
-          throw ApiResponseException('Nieuprawnione działanie.');
-        }
-        case 403: {
-          throw ApiResponseException('Token wygasł.');
-        }
+      switch (e.response?.statusCode) {
+        case 400:
+          {
+            throw ApiResponseException('Błędne żądanie odświeżenia tokenu.');
+          }
+        case 401:
+          {
+            throw ApiResponseException('Nieuprawnione działanie.');
+          }
+        case 403:
+          {
+            throw ApiResponseException('Token wygasł.');
+          }
       }
     } catch (e) {
       throw ApiResponseException('Nieznany błąd odświeżenia tokenu.');

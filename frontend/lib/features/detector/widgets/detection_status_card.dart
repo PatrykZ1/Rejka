@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 class DetectionStatusCard extends StatelessWidget {
   const DetectionStatusCard({
@@ -87,10 +87,7 @@ class DetectionStatusCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   lastDetection,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    color: Colors.white70,
-                  ),
+                  style: const TextStyle(fontSize: 13.5, color: Colors.white70),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],

@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/tracked_plate.dart';
 
 class PlateOverlay extends StatelessWidget {
-  const PlateOverlay({
-    super.key,
-    required this.tracks,
-  });
+  const PlateOverlay({super.key, required this.tracks});
 
   final List<TrackedPlate> tracks;
 
@@ -48,10 +45,7 @@ class _PlateBox extends StatelessWidget {
         color: track.selected
             ? scheme.primary.withValues(alpha: 0.18)
             : Colors.transparent,
-        border: Border.all(
-          color: accent,
-          width: track.selected ? 3 : 2,
-        ),
+        border: Border.all(color: accent, width: track.selected ? 3 : 2),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Stack(
@@ -68,9 +62,10 @@ class _PlateBox extends StatelessWidget {
                     : Colors.black.withValues(alpha: 0.72),
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
-                    color: track.selected
-                        ? scheme.primary
-                        : Colors.white.withValues(alpha: 0.35)),
+                  color: track.selected
+                      ? scheme.primary
+                      : Colors.white.withValues(alpha: 0.35),
+                ),
               ),
               child: track.ocrInFlight
                   ? const SizedBox(
@@ -91,8 +86,7 @@ class _PlateBox extends StatelessWidget {
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 1.0,
-                            fontFamily:
-                                track.hasText ? 'monospace' : null,
+                            fontFamily: track.hasText ? 'monospace' : null,
                           ),
                         ),
                       ],
