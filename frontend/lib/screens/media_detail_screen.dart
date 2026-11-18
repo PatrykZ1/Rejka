@@ -1,5 +1,4 @@
 import 'package:boundingbox/constants.dart';
-import 'package:boundingbox/widgets/drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:video_player/video_player.dart';
@@ -68,7 +67,6 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text(applicationName)),
-      drawer: AppDrawer(),
       body: FutureBuilder<MediaItem?>(
         future: _mediaFuture,
         builder: (context, snapshot) {
