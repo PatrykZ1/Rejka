@@ -33,3 +33,19 @@ public sealed class UploadMediaRequest
 
     public string? Comment { get; set; }
 }
+
+public sealed class UpdateMediaRequest
+{
+    public string? FileName { get; set; }
+    public decimal? Latitude { get; set; }
+    public decimal? Longitude { get; set; }
+    public DateTimeOffset? RecordedAt { get; set; }
+    public string? Comment { get; set; }
+}
+
+public sealed record PagedMediaResponse(
+    IReadOnlyList<MediaItemResponse> Items,
+    int Page,
+    int PageSize,
+    int Total,
+    int TotalPages);

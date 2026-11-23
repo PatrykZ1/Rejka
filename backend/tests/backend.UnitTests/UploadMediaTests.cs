@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text;
 using backend.Application.Features.Media;
 using backend.Application.Interfaces.Analysis;
 using backend.Application.Interfaces.Media;
@@ -148,6 +149,53 @@ public sealed class UploadMediaTests
         Assert.Empty(storage.UploadedBlobs);
     }
 
+    [Theory]
+    [InlineData("video.mp4", "video/mp4", "isom", "video/mp4")]
+    [InlineData("video.MOV", "video/quicktime", "qt  ", "video/quicktime")]
+    public async Task UploadMedia_AcceptsMp4AndMovFiles(
+        string fileName,
+        string contentType,
+        string majorBrand,
+        string expectedStoredContentType)
+    {
+        var storage = new FakeBlobStorageService();
+        var useCase = new UploadMedia(
+            storage,
+            new FakeMediaRepository(),
+            new FakeMediaAnalysisQueue(),
+            new TestTimeProvider(Now),
+            NullLogger<UploadMedia>.Instance);
+
+        using var stream = new MemoryStream(CreateFtypHeader(majorBrand));
+        var result = await useCase.ExecuteAsync(new UploadMediaCommand(42, fileName, contentType, stream));
+
+        Assert.Equal(UploadMediaStatus.Success, result.Status);
+        Assert.Equal(expectedStoredContentType, Assert.Single(storage.UploadedBlobs).ContentType);
+    }
+
+    [Theory]
+    [InlineData("video.mp4", "video/mp4", "qt  ")]
+    [InlineData("video.mov", "video/quicktime", "isom")]
+    public async Task UploadMedia_RejectsVideoWithMismatchedContainerSignature(
+        string fileName,
+        string contentType,
+        string majorBrand)
+    {
+        var storage = new FakeBlobStorageService();
+        var useCase = new UploadMedia(
+            storage,
+            new FakeMediaRepository(),
+            new FakeMediaAnalysisQueue(),
+            new TestTimeProvider(Now),
+            NullLogger<UploadMedia>.Instance);
+
+        using var stream = new MemoryStream(CreateFtypHeader(majorBrand));
+        var result = await useCase.ExecuteAsync(new UploadMediaCommand(42, fileName, contentType, stream));
+
+        Assert.Equal(UploadMediaStatus.UnsupportedMediaType, result.Status);
+        Assert.Empty(storage.UploadedBlobs);
+    }
+
     [Fact]
     public async Task UploadMedia_RejectsIncompleteOrOutOfRangeCoordinates()
     {
@@ -239,6 +287,13 @@ public sealed class UploadMediaTests
         public override DateTimeOffset GetUtcNow() => now;
     }
 
+    private static byte[] CreateFtypHeader(string majorBrand)
+    {
+        var brand = Encoding.ASCII.GetBytes(majorBrand);
+        Assert.Equal(4, brand.Length);
+        return [0, 0, 0, 16, (byte)'f', (byte)'t', (byte)'y', (byte)'p', .. brand, 0, 0, 0, 0];
+    }
+
     private sealed class FakeBlobStorageService : IBlobStorageService
     {
         public List<(string Name, string ContentType)> UploadedBlobs { get; } = [];
@@ -296,6 +351,59 @@ public sealed class UploadMediaTests
         public Task<MediaFile?> GetByIdAsync(int mediaId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(AddedMedia.Find(m => m.Id == mediaId));
+        }
+
+        public Task<IReadOnlyList<MediaFile>> GetByUserAsync(
+            int userId,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken = default)
+        {
+            var result = AddedMedia.Where(m => m.UserId == userId).Skip((page - 1) * pageSize).Take(pageSize).ToArray();
+            return Task.FromResult<IReadOnlyList<MediaFile>>(result);
+        }
+
+        public Task<int> CountByUserAsync(int userId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(AddedMedia.Count(m => m.UserId == userId));
+        }
+
+        public Task<bool> UpdateMetadataAsync(
+            int mediaId,
+            int userId,
+            string? fileName,
+            string? comment,
+            DateTimeOffset? recordedAt,
+            decimal? latitude,
+            decimal? longitude,
+            CancellationToken cancellationToken = default)
+        {
+            var media = AddedMedia.Find(m => m.Id == mediaId && m.UserId == userId);
+            if (media == null)
+            {
+                return Task.FromResult(false);
+            }
+
+            Location? location = latitude.HasValue && longitude.HasValue
+                ? new Location(latitude.Value, longitude.Value)
+                : null;
+            media.UpdateMetadata(fileName, comment, recordedAt, location?.Id, location);
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> DeleteAsync(
+            int mediaId,
+            int userId,
+            DateTimeOffset deletedAt,
+            CancellationToken cancellationToken = default)
+        {
+            var media = AddedMedia.Find(m => m.Id == mediaId && m.UserId == userId);
+            if (media == null)
+            {
+                return Task.FromResult(false);
+            }
+
+            return Task.FromResult(media.ChangeState(FileState.Deleted));
         }
 
     }

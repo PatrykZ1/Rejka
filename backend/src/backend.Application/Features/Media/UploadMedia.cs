@@ -3,6 +3,7 @@ using backend.Application.Interfaces.Media;
 using backend.Application.Interfaces.Storage;
 using backend.Domain.Locations;
 using backend.Domain.Media;
+using System.Buffers.Binary;
 using Microsoft.Extensions.Logging;
 
 namespace backend.Application.Features.Media;
@@ -78,9 +79,9 @@ public sealed class UploadMedia
 
         var normalizedContentType = GetNormalizedContentType(command.FileName, command.ContentType);
         if (normalizedContentType is null
-            || !await HasValidImageSignatureAsync(command.FileStream, normalizedContentType, cancellationToken))
+            || !await HasValidMediaSignatureAsync(command.FileStream, normalizedContentType, cancellationToken))
         {
-            return new UploadMediaResult(UploadMediaStatus.UnsupportedMediaType, ErrorMessage: "Nieobsługiwany format pliku. Dozwolone formaty to JPG oraz PNG.");
+            return new UploadMediaResult(UploadMediaStatus.UnsupportedMediaType, ErrorMessage: "Nieobsługiwany format pliku. Dozwolone formaty to JPG, PNG, MP4 oraz MOV.");
         }
 
         var safeFileName = Path.GetFileName(command.FileName);
@@ -182,10 +183,22 @@ public sealed class UploadMedia
             return "image/png";
         }
 
+        if (extension.Equals(".mp4", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(contentType, "video/mp4", StringComparison.OrdinalIgnoreCase))
+        {
+            return "video/mp4";
+        }
+
+        if (extension.Equals(".mov", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(contentType, "video/quicktime", StringComparison.OrdinalIgnoreCase))
+        {
+            return "video/quicktime";
+        }
+
         return null;
     }
 
-    private static async Task<bool> HasValidImageSignatureAsync(
+    private static async Task<bool> HasValidMediaSignatureAsync(
         Stream stream,
         string contentType,
         CancellationToken cancellationToken)
@@ -194,7 +207,7 @@ public sealed class UploadMedia
         try
         {
             stream.Position = 0;
-            var header = new byte[8];
+            var header = new byte[16];
             var bytesRead = 0;
             while (bytesRead < header.Length)
             {
@@ -220,10 +233,35 @@ public sealed class UploadMedia
                     && header[7] == 0x0A;
             }
 
-            return bytesRead >= 3
-                && header[0] == 0xFF
-                && header[1] == 0xD8
-                && header[2] == 0xFF;
+            if (contentType == "image/jpeg")
+            {
+                return bytesRead >= 3
+                    && header[0] == 0xFF
+                    && header[1] == 0xD8
+                    && header[2] == 0xFF;
+            }
+
+            if (contentType is "video/mp4" or "video/quicktime")
+            {
+                if (bytesRead < header.Length
+                    || !header.AsSpan(4, 4).SequenceEqual("ftyp"u8))
+                {
+                    return false;
+                }
+
+                var boxSize = BinaryPrimitives.ReadUInt32BigEndian(header.AsSpan(0, 4));
+                if (boxSize < header.Length || boxSize > stream.Length)
+                {
+                    return false;
+                }
+
+                var majorBrand = System.Text.Encoding.ASCII.GetString(header, 8, 4);
+                return contentType == "video/mp4"
+                    ? majorBrand is "isom" or "iso2" or "mp41" or "mp42" or "avc1" or "M4V " or "dash"
+                    : majorBrand == "qt  ";
+            }
+
+            return false;
         }
         finally
         {

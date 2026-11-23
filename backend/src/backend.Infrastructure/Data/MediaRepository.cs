@@ -154,4 +154,174 @@ public sealed class MediaRepository : IMediaRepository
             location: location);
     }
 
+    public async Task<IReadOnlyList<MediaFile>> GetByUserAsync(
+        int userId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = new SqlConnection(_options.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        const string sql = """
+            SELECT m.[Id], m.[UserId], m.[LocationId], m.[RecordedAt], m.[UploadedAt], m.[Comment], m.[Status], m.[MediaUrl], m.[FileName],
+                   g.[latitude], g.[longitude]
+            FROM [Media] m
+            LEFT JOIN [Geography] g ON m.[LocationId] = g.[Id]
+            WHERE m.[UserId] = @UserId AND m.[Status] <> 'DELETED'
+            ORDER BY m.[UploadedAt] DESC, m.[Id] DESC
+            OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
+            """;
+
+        await using var command = new SqlCommand(sql, connection);
+        command.Parameters.Add(new SqlParameter("@UserId", SqlDbType.Int) { Value = userId });
+        command.Parameters.Add(new SqlParameter("@Offset", SqlDbType.Int) { Value = (page - 1) * pageSize });
+        command.Parameters.Add(new SqlParameter("@PageSize", SqlDbType.Int) { Value = pageSize });
+
+        var result = new List<MediaFile>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            result.Add(ReadMedia(reader));
+        }
+
+        return result;
+    }
+
+    public async Task<int> CountByUserAsync(int userId, CancellationToken cancellationToken = default)
+    {
+        await using var connection = new SqlConnection(_options.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = new SqlCommand(
+            "SELECT COUNT(*) FROM [Media] WHERE [UserId] = @UserId AND [Status] <> 'DELETED';",
+            connection);
+        command.Parameters.Add(new SqlParameter("@UserId", SqlDbType.Int) { Value = userId });
+
+        return Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
+    }
+
+    public async Task<bool> UpdateMetadataAsync(
+        int mediaId,
+        int userId,
+        string? fileName,
+        string? comment,
+        DateTimeOffset? recordedAt,
+        decimal? latitude,
+        decimal? longitude,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = new SqlConnection(_options.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            int? locationId = null;
+            if (latitude.HasValue && longitude.HasValue)
+            {
+                const string insertGeoSql = """
+                    INSERT INTO [Geography] ([latitude], [longitude])
+                    VALUES (@Latitude, @Longitude);
+                    SELECT CAST(SCOPE_IDENTITY() AS INT);
+                    """;
+
+                await using var geoCmd = new SqlCommand(insertGeoSql, connection, transaction);
+                geoCmd.Parameters.Add(new SqlParameter("@Latitude", SqlDbType.Decimal) { Precision = 8, Scale = 6, Value = latitude.Value });
+                geoCmd.Parameters.Add(new SqlParameter("@Longitude", SqlDbType.Decimal) { Precision = 9, Scale = 6, Value = longitude.Value });
+                locationId = Convert.ToInt32(await geoCmd.ExecuteScalarAsync(cancellationToken));
+            }
+
+            const string sql = """
+                UPDATE [Media]
+                SET [FileName] = COALESCE(@FileName, [FileName]),
+                    [Comment] = @Comment,
+                    [RecordedAt] = @RecordedAt,
+                    [LocationId] = @LocationId
+                WHERE [Id] = @MediaId AND [UserId] = @UserId AND [Status] <> 'DELETED';
+                """;
+
+            await using var command = new SqlCommand(sql, connection, transaction);
+            command.Parameters.Add(new SqlParameter("@FileName", SqlDbType.NVarChar, 255) { Value = (object?)fileName?.Trim() ?? DBNull.Value });
+            command.Parameters.Add(new SqlParameter("@Comment", SqlDbType.NVarChar) { Value = (object?)comment ?? DBNull.Value });
+            command.Parameters.Add(new SqlParameter("@RecordedAt", SqlDbType.DateTime2) { Value = (object?)recordedAt?.UtcDateTime ?? DBNull.Value });
+            command.Parameters.Add(new SqlParameter("@LocationId", SqlDbType.Int) { Value = (object?)locationId ?? DBNull.Value });
+            command.Parameters.Add(new SqlParameter("@MediaId", SqlDbType.Int) { Value = mediaId });
+            command.Parameters.Add(new SqlParameter("@UserId", SqlDbType.Int) { Value = userId });
+
+            var affected = await command.ExecuteNonQueryAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return affected > 0;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+
+    public async Task<bool> DeleteAsync(
+        int mediaId,
+        int userId,
+        DateTimeOffset deletedAt,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = new SqlConnection(_options.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        const string sql = """
+            UPDATE [Media]
+            SET [Status] = 'DELETED'
+            WHERE [Id] = @MediaId AND [UserId] = @UserId AND [Status] <> 'DELETED';
+
+            IF @@ROWCOUNT > 0
+            BEGIN
+                INSERT INTO [MediaActivityRecords] ([MediaId], [Action], [OccurredAt])
+                VALUES (@MediaId, 'DELETE', @DeletedAt);
+            END;
+            """;
+
+        await using var command = new SqlCommand(sql, connection);
+        command.Parameters.Add(new SqlParameter("@MediaId", SqlDbType.Int) { Value = mediaId });
+        command.Parameters.Add(new SqlParameter("@UserId", SqlDbType.Int) { Value = userId });
+        command.Parameters.Add(new SqlParameter("@DeletedAt", SqlDbType.DateTime2) { Value = deletedAt.UtcDateTime });
+        return await command.ExecuteNonQueryAsync(cancellationToken) > 0;
+    }
+
+    private static MediaFile ReadMedia(SqlDataReader reader)
+    {
+        var id = reader.GetInt32(0);
+        var userId = reader.GetInt32(1);
+        int? locationId = reader.IsDBNull(2) ? null : reader.GetInt32(2);
+        DateTimeOffset? recordedAt = reader.IsDBNull(3) ? null : new DateTimeOffset(reader.GetDateTime(3), TimeSpan.Zero);
+        var uploadedAt = new DateTimeOffset(reader.GetDateTime(4), TimeSpan.Zero);
+        string? comment = reader.IsDBNull(5) ? null : reader.GetString(5);
+        var statusStr = reader.GetString(6);
+        string? mediaUrl = reader.IsDBNull(7) ? null : reader.GetString(7);
+        var fileName = reader.GetString(8);
+
+        Location? location = null;
+        if (locationId.HasValue && !reader.IsDBNull(9) && !reader.IsDBNull(10))
+        {
+            location = new Location(locationId.Value, reader.GetDecimal(9), reader.GetDecimal(10));
+        }
+
+        if (!Enum.TryParse<FileState>(statusStr, ignoreCase: true, out var fileState))
+        {
+            fileState = FileState.Active;
+        }
+
+        return new FileImage(
+            id: id,
+            fileName: fileName,
+            userId: userId,
+            mediaUrl: mediaUrl,
+            uploadedAt: uploadedAt,
+            recordedAt: recordedAt,
+            comment: comment,
+            state: fileState,
+            locationId: locationId,
+            location: location);
+    }
+
 }
