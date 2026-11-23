@@ -132,27 +132,24 @@ class _RegistrationListScreenState extends State<RegistrationListScreen> {
       },
       title: Align(
         alignment: Alignment.centerLeft,
-        child: SizedBox(
-          width: 200,
-          child: RegistrationPlate(item.number)
-        ),
+        child: SizedBox(width: 200, child: RegistrationPlate(item.number)),
       ),
       trailing: item.ratings.isNotEmpty
           ? Chip(
-        avatar: const Icon(Icons.star, color: Colors.amber, size: 18),
-        label: Text(
-          (item.ratings
-              .reduce(
-                (a, b) => RegistrationRating(
-              registration: a.registration,
-              rating: a.rating + b.rating,
-            ),
-          )
-              .rating /
-              item.ratings.length.toDouble())
-              .toStringAsFixed(1),
-        ),
-      )
+              avatar: const Icon(Icons.star, color: Colors.amber, size: 18),
+              label: Text(
+                (item.ratings
+                            .reduce(
+                              (a, b) => RegistrationRating(
+                                registration: a.registration,
+                                rating: a.rating + b.rating,
+                              ),
+                            )
+                            .rating /
+                        item.ratings.length.toDouble())
+                    .toStringAsFixed(1),
+              ),
+            )
           : const Text('Brak oceny.', style: TextStyle(color: Colors.grey)),
     );
   }

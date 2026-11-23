@@ -1,5 +1,4 @@
 import 'package:boundingbox/api/models/response/registration_item_response.dart';
-import 'package:boundingbox/api/models/response/registration_rating_response.dart';
 import 'package:boundingbox/models/location_point.dart';
 import 'package:boundingbox/models/media_item.dart';
 import 'package:boundingbox/models/registration_rating.dart';

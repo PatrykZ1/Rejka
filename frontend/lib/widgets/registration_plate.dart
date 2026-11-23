@@ -29,7 +29,10 @@ class _PlatePainter extends CustomPainter {
     canvas.scale(size.width / 520, size.height / 114);
 
     canvas.drawRRect(
-      RRect.fromRectAndRadius(Rect.fromLTWH(0, 0, 520, 114), const Radius.circular(8)),
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(0, 0, 520, 114),
+        const Radius.circular(8),
+      ),
       Paint()..color = _black,
     );
     final inner = RRect.fromRectAndRadius(
@@ -65,18 +68,36 @@ class _PlatePainter extends CustomPainter {
     }
   }
 
-  void _text(Canvas canvas, String s, double size, Color color, double cx, double baseline, [double sx = 1]) {
+  void _text(
+    Canvas canvas,
+    String s,
+    double size,
+    Color color,
+    double cx,
+    double baseline, [
+    double sx = 1,
+  ]) {
     final tp = TextPainter(
       text: TextSpan(
         text: s,
-        style: TextStyle(color: color, fontSize: size, fontWeight: FontWeight.w700),
+        style: TextStyle(
+          color: color,
+          fontSize: size,
+          fontWeight: FontWeight.w700,
+        ),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
     canvas.save();
     canvas.translate(cx, baseline);
     canvas.scale(sx, 1);
-    tp.paint(canvas, Offset(-tp.width / 2, -tp.computeDistanceToActualBaseline(TextBaseline.alphabetic)));
+    tp.paint(
+      canvas,
+      Offset(
+        -tp.width / 2,
+        -tp.computeDistanceToActualBaseline(TextBaseline.alphabetic),
+      ),
+    );
     canvas.restore();
   }
 
@@ -102,7 +123,13 @@ class _PlatePainter extends CustomPainter {
     final shader = const LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [Color(0xFFE8E8E8), Color(0xFFB9D7EA), Color(0xFFE9C9E9), Color(0xFFCFEBC9), Color(0xFFE8E8E8)],
+      colors: [
+        Color(0xFFE8E8E8),
+        Color(0xFFB9D7EA),
+        Color(0xFFE9C9E9),
+        Color(0xFFCFEBC9),
+        Color(0xFFE8E8E8),
+      ],
     ).createShader(r.outerRect);
     canvas.drawRRect(r, Paint()..shader = shader);
     canvas.drawRRect(
