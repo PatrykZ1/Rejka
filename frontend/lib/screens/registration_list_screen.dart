@@ -5,6 +5,7 @@ import 'package:boundingbox/models/registration_filter.dart';
 import 'package:boundingbox/models/registration_item.dart';
 import 'package:boundingbox/models/registration_rating.dart';
 import 'package:boundingbox/widgets/drawer.dart';
+import 'package:boundingbox/widgets/registration_plate.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -129,7 +130,13 @@ class _RegistrationListScreenState extends State<RegistrationListScreen> {
       onTap: () {
         context.push('/registration/${item.number}');
       },
-      title: Text(item.number),
+      title: Align(
+        alignment: Alignment.centerLeft,
+        child: SizedBox(
+          width: 200,
+          child: RegistrationPlate(item.number)
+        ),
+      ),
       trailing: item.ratings.isNotEmpty
           ? Chip(
         avatar: const Icon(Icons.star, color: Colors.amber, size: 18),
@@ -146,30 +153,6 @@ class _RegistrationListScreenState extends State<RegistrationListScreen> {
               .toStringAsFixed(1),
         ),
       )
-          : const Text('Brak oceny.', style: TextStyle(color: Colors.grey)),
-    );
-
-    return ListTile(
-      leading: Text(item.number, style: TextStyle(fontSize: 23)),
-      onTap: () {
-        context.push('/registration/${item.number}');
-      },
-      trailing: item.ratings.isNotEmpty
-          ? Chip(
-              avatar: const Icon(Icons.star, color: Colors.amber, size: 18),
-              label: Text(
-                (item.ratings
-                            .reduce(
-                              (a, b) => RegistrationRating(
-                                registration: a.registration,
-                                rating: a.rating + b.rating,
-                              ),
-                            )
-                            .rating /
-                        item.ratings.length.toDouble())
-                    .toStringAsFixed(1),
-              ),
-            )
           : const Text('Brak oceny.', style: TextStyle(color: Colors.grey)),
     );
   }

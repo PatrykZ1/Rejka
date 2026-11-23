@@ -5,6 +5,7 @@ import 'package:boundingbox/models/media_item.dart';
 import 'package:boundingbox/models/registration_item.dart';
 import 'package:boundingbox/models/registration_rating.dart';
 import 'package:boundingbox/widgets/media_thumbnail.dart';
+import 'package:boundingbox/widgets/registration_plate.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -106,56 +107,11 @@ class _RegistrationDetailScreenState extends State<RegistrationDetailScreen> {
     );
   }
 
-  // Polska tablica rejestracyjna
   Widget _buildPlate(String number) {
     return Center(
-      child: Container(
-        height: 110,
+      child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520),
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: Colors.black, width: 3),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              color: const Color(0xFF003399),
-              child: const Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.star, color: Colors.yellow, size: 16),
-                  Text(
-                    'PL',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: FittedBox(
-                  child: Text(
-                    number,
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontSize: 72,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 4,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+        child: RegistrationPlate(number),
       ),
     );
   }
