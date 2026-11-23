@@ -1,5 +1,6 @@
 import 'package:boundingbox/constants.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:video_player/video_player.dart';
 
@@ -296,6 +297,9 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
 
         return ListTile(
           contentPadding: EdgeInsets.zero,
+          onTap: () {
+            context.push('/registration/$registration');
+          },
           title: Text(registration),
           trailing: rating != null
               ? Chip(
