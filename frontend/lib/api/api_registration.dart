@@ -17,8 +17,8 @@ class ApiRegistration {
 
   //final ApiCore _api = ApiCore();
 
-  static Map<int, RegistrationItemResponse> registrations = {
-    0: RegistrationItemResponse(
+  static Map<String, RegistrationItemResponse> registrations = {
+    'BIA4298': RegistrationItemResponse(
       number: 'BIA4298',
       videos: [
         MediaItemResponse(
@@ -43,7 +43,7 @@ class ApiRegistration {
       recordedAt: [DateTime.now()],
       ratings: [RegistrationRatingResponse(registration: 'BIA4298', rating: 9)],
     ),
-    1: RegistrationItemResponse(
+    'WX6958H': RegistrationItemResponse(
       number: 'WX6958H',
       videos: [
         MediaItemResponse(
@@ -90,7 +90,7 @@ class ApiRegistration {
         RegistrationRatingResponse(registration: 'WX6958H', rating: 7),
       ],
     ),
-    2: RegistrationItemResponse(
+    'WY7655F': RegistrationItemResponse(
       number: 'WY7655F',
       videos: [
         MediaItemResponse(
@@ -214,9 +214,9 @@ class ApiRegistration {
     // ),
   };
 
-  Future<RegistrationItemResponse?> getRegistrationItem(int id) async {
+  Future<RegistrationItemResponse?> getRegistrationItem(String number) async {
     await Future.delayed(const Duration(milliseconds: 500));
-    return registrations[id];
+    return registrations[number];
   }
 
   Future<PaginatedRegistrationResponse?> getPagedRegistrations({

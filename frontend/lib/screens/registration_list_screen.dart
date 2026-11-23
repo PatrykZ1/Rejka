@@ -3,9 +3,10 @@ import 'package:boundingbox/constants.dart';
 import 'package:boundingbox/models/paginated_registration_list.dart';
 import 'package:boundingbox/models/registration_filter.dart';
 import 'package:boundingbox/models/registration_item.dart';
+import 'package:boundingbox/models/registration_rating.dart';
 import 'package:boundingbox/widgets/drawer.dart';
-import 'package:boundingbox/widgets/media_thumbnail.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class RegistrationListScreen extends StatefulWidget {
   const RegistrationListScreen({super.key});
@@ -123,20 +124,53 @@ class _RegistrationListScreenState extends State<RegistrationListScreen> {
   }
 
   Widget _buildTile(RegistrationItem item) {
-    final video = item.videos.isEmpty ? null : item.videos.first;
     return ListTile(
-      leading: SizedBox(
-        width: 64,
-        height: 64,
-        child: video == null
-            ? const Icon(Icons.directions_car)
-            : ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: MediaThumbnail(url: video.url, fileName: video.fileName),
-              ),
-      ),
+      contentPadding: EdgeInsets.zero,
+      onTap: () {
+        context.push('/registration/${item.number}');
+      },
       title: Text(item.number),
-      subtitle: Text('Nagrań: ${item.videos.length}'),
+      trailing: item.ratings.isNotEmpty
+          ? Chip(
+        avatar: const Icon(Icons.star, color: Colors.amber, size: 18),
+        label: Text(
+          (item.ratings
+              .reduce(
+                (a, b) => RegistrationRating(
+              registration: a.registration,
+              rating: a.rating + b.rating,
+            ),
+          )
+              .rating /
+              item.ratings.length.toDouble())
+              .toStringAsFixed(1),
+        ),
+      )
+          : const Text('Brak oceny.', style: TextStyle(color: Colors.grey)),
+    );
+
+    return ListTile(
+      leading: Text(item.number, style: TextStyle(fontSize: 23)),
+      onTap: () {
+        context.push('/registration/${item.number}');
+      },
+      trailing: item.ratings.isNotEmpty
+          ? Chip(
+              avatar: const Icon(Icons.star, color: Colors.amber, size: 18),
+              label: Text(
+                (item.ratings
+                            .reduce(
+                              (a, b) => RegistrationRating(
+                                registration: a.registration,
+                                rating: a.rating + b.rating,
+                              ),
+                            )
+                            .rating /
+                        item.ratings.length.toDouble())
+                    .toStringAsFixed(1),
+              ),
+            )
+          : const Text('Brak oceny.', style: TextStyle(color: Colors.grey)),
     );
   }
 
