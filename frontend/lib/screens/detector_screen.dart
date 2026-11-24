@@ -110,7 +110,7 @@ class _DetectorScreenState extends State<DetectorScreen> {
             task: YOLOTask.detect,
             controller: _yoloController,
             lensFacing: LensFacing.back,
-            cameraResolution: '640x480',
+            cameraResolution: '2000x1500',
             confidenceThreshold: 0.20,
             iouThreshold: 0.45,
             useGpu: true,
