@@ -1,4 +1,8 @@
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
@@ -12,6 +16,7 @@ COPY ["src/backend.Domain/backend.Domain.csproj", "src/backend.Domain/"]
 COPY ["src/backend.Application/backend.Application.csproj", "src/backend.Application/"]
 COPY ["src/backend.Infrastructure/backend.Infrastructure.csproj", "src/backend.Infrastructure/"]
 COPY ["src/backend.API/backend.API.csproj", "src/backend.API/"]
+COPY ["models/", "models/"]
 
 RUN dotnet restore "src/backend.API/backend.API.csproj"
 

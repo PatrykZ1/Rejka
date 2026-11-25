@@ -8,6 +8,7 @@ public interface IMediaRepository
         MediaFile media,
         string action,
         DateTimeOffset occurredAt,
+        bool enqueueMediaAnalysis = false,
         CancellationToken cancellationToken = default);
     Task<MediaFile?> GetByIdAsync(int mediaId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<MediaFile>> GetByUserAsync(
@@ -29,5 +30,8 @@ public interface IMediaRepository
         int mediaId,
         int userId,
         DateTimeOffset deletedAt,
+        CancellationToken cancellationToken = default);
+    Task<IReadOnlyDictionary<int, IReadOnlyList<string>>> GetRegistrationsByMediaIdsAsync(
+        IReadOnlyCollection<int> mediaIds,
         CancellationToken cancellationToken = default);
 }

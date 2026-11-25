@@ -18,7 +18,8 @@ public sealed record MediaItemResponse(
     string? UploadedAt,
     string Comment,
     IReadOnlyList<string> Registrations,
-    IReadOnlyList<RegistrationRatingResponse> Ratings);
+    IReadOnlyList<RegistrationRatingResponse> Ratings,
+    string AnalysisStatus);
 
 public sealed class UploadMediaRequest
 {

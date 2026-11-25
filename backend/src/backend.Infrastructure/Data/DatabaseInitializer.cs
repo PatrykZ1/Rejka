@@ -114,6 +114,27 @@ public sealed class DatabaseInitializer(IOptions<DatabaseOptions> options, ILogg
                 );
             END;
 
+            -- 3a. MediaAnalysisJobs
+            IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'MediaAnalysisJobs')
+            BEGIN
+                CREATE TABLE [MediaAnalysisJobs] (
+                    [MediaId] INTEGER NOT NULL,
+                    [Status] NVARCHAR(16) NOT NULL,
+                    [AttemptCount] INTEGER NOT NULL CONSTRAINT DF_MediaAnalysisJobs_AttemptCount DEFAULT (0),
+                    [CreatedAt] DATETIME2 NOT NULL,
+                    [UpdatedAt] DATETIME2 NOT NULL,
+                    [LastErrorCode] NVARCHAR(64),
+                    PRIMARY KEY([MediaId]),
+                    CONSTRAINT FK_MediaAnalysisJobs_Media FOREIGN KEY([MediaId]) REFERENCES [Media]([Id]) ON DELETE NO ACTION ON UPDATE NO ACTION
+                );
+            END;
+
+            IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_MediaAnalysisJobs_Status_CreatedAt')
+            BEGIN
+                CREATE INDEX IX_MediaAnalysisJobs_Status_CreatedAt
+                ON [MediaAnalysisJobs] ([Status], [CreatedAt], [MediaId]);
+            END;
+
             -- 4. Registration
             IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Registration')
             BEGIN

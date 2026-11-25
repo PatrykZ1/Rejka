@@ -1,4 +1,6 @@
 using System.Data;
+using System.Text;
+using backend.Application.Interfaces.Analysis;
 using backend.Application.Interfaces.Media;
 using backend.Domain.Locations;
 using backend.Domain.Media;
@@ -8,7 +10,7 @@ using MediaFile = backend.Domain.Media.File;
 
 namespace backend.Infrastructure.Data;
 
-public sealed class MediaRepository : IMediaRepository
+public sealed class MediaRepository : IMediaRepository, IMediaAnalysisRepository
 {
     private readonly DatabaseOptions _options;
 
@@ -21,6 +23,7 @@ public sealed class MediaRepository : IMediaRepository
         MediaFile media,
         string action,
         DateTimeOffset occurredAt,
+        bool enqueueMediaAnalysis = false,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(media);
@@ -77,6 +80,19 @@ public sealed class MediaRepository : IMediaRepository
                 throw new InvalidOperationException("Nie udało się pobrać identyfikatora utworzonego rekordu Media.");
             }
 
+            if (enqueueMediaAnalysis)
+            {
+                const string insertAnalysisJobSql = """
+                    INSERT INTO [MediaAnalysisJobs] ([MediaId], [Status], [AttemptCount], [CreatedAt], [UpdatedAt])
+                    VALUES (@MediaId, 'PENDING', 0, @CreatedAt, @CreatedAt);
+                    """;
+                await using var analysisJobCmd = new SqlCommand(insertAnalysisJobSql, connection, transaction);
+                analysisJobCmd.Parameters.Add(new SqlParameter("@MediaId", SqlDbType.Int) { Value = mediaId });
+                analysisJobCmd.Parameters.Add(new SqlParameter("@CreatedAt", SqlDbType.DateTime2) { Value = occurredAt.UtcDateTime });
+                await analysisJobCmd.ExecuteNonQueryAsync(cancellationToken);
+                media.SetAnalysisStatus(MediaAnalysisStatus.Pending);
+            }
+
             const string insertActivitySql = """
                 INSERT INTO [MediaActivityRecords] ([MediaId], [Action], [OccurredAt])
                 VALUES (@MediaId, @Action, @OccurredAt);
@@ -105,9 +121,10 @@ public sealed class MediaRepository : IMediaRepository
 
         const string sql = """
             SELECT m.[Id], m.[UserId], m.[LocationId], m.[RecordedAt], m.[UploadedAt], m.[Comment], m.[Status], m.[MediaUrl], m.[FileName],
-                   g.[latitude], g.[longitude]
+                   g.[latitude], g.[longitude], COALESCE(a.[Status], 'NOT_REQUESTED')
             FROM [Media] m
             LEFT JOIN [Geography] g ON m.[LocationId] = g.[Id]
+            LEFT JOIN [MediaAnalysisJobs] a ON a.[MediaId] = m.[Id]
             WHERE m.[Id] = @MediaId;
             """;
 
@@ -141,7 +158,7 @@ public sealed class MediaRepository : IMediaRepository
             fileState = FileState.Active;
         }
 
-        return new FileImage(
+        var media = new FileImage(
             id: id,
             fileName: fileName,
             userId: userId,
@@ -152,6 +169,9 @@ public sealed class MediaRepository : IMediaRepository
             state: fileState,
             locationId: locationId,
             location: location);
+        media.SetAnalysisStatus(ParseAnalysisStatus(reader.GetString(11)));
+
+        return media;
     }
 
     public async Task<IReadOnlyList<MediaFile>> GetByUserAsync(
@@ -165,9 +185,10 @@ public sealed class MediaRepository : IMediaRepository
 
         const string sql = """
             SELECT m.[Id], m.[UserId], m.[LocationId], m.[RecordedAt], m.[UploadedAt], m.[Comment], m.[Status], m.[MediaUrl], m.[FileName],
-                   g.[latitude], g.[longitude]
+                   g.[latitude], g.[longitude], COALESCE(a.[Status], 'NOT_REQUESTED')
             FROM [Media] m
             LEFT JOIN [Geography] g ON m.[LocationId] = g.[Id]
+            LEFT JOIN [MediaAnalysisJobs] a ON a.[MediaId] = m.[Id]
             WHERE m.[UserId] = @UserId AND m.[Status] <> 'DELETED'
             ORDER BY m.[UploadedAt] DESC, m.[Id] DESC
             OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
@@ -199,6 +220,317 @@ public sealed class MediaRepository : IMediaRepository
         command.Parameters.Add(new SqlParameter("@UserId", SqlDbType.Int) { Value = userId });
 
         return Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
+    }
+
+    public async Task<IReadOnlyDictionary<int, IReadOnlyList<string>>> GetRegistrationsByMediaIdsAsync(
+        IReadOnlyCollection<int> mediaIds,
+        CancellationToken cancellationToken = default)
+    {
+        var ids = mediaIds.Distinct().ToArray();
+        if (ids.Length == 0)
+        {
+            return new Dictionary<int, IReadOnlyList<string>>();
+        }
+
+        await using var connection = new SqlConnection(_options.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        var parameterNames = ids.Select((_, index) => $"@MediaId{index}").ToArray();
+        var sql = $"""
+            SELECT r.[MediaId], reg.[Number]
+            FROM [Rating] r
+            INNER JOIN [Registration] reg ON reg.[Id] = r.[RegistrationId]
+            WHERE r.[MediaId] IN ({string.Join(", ", parameterNames)})
+            ORDER BY r.[MediaId], reg.[Number];
+            """;
+
+        await using var command = new SqlCommand(sql, connection);
+        for (var index = 0; index < ids.Length; index++)
+        {
+            command.Parameters.Add(new SqlParameter(parameterNames[index], SqlDbType.Int) { Value = ids[index] });
+        }
+
+        var registrations = new Dictionary<int, List<string>>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var mediaId = reader.GetInt32(0);
+            if (!registrations.TryGetValue(mediaId, out var list))
+            {
+                list = [];
+                registrations.Add(mediaId, list);
+            }
+
+            list.Add(reader.GetString(1));
+        }
+
+        return registrations.ToDictionary(
+            pair => pair.Key,
+            pair => (IReadOnlyList<string>)pair.Value);
+    }
+
+    public async Task<MediaAnalysisWorkItem?> ClaimNextAsync(CancellationToken cancellationToken = default)
+    {
+        await using var connection = new SqlConnection(_options.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        const string sql = """
+            UPDATE [MediaAnalysisJobs]
+            SET [Status] = 'FAILED',
+                [LastErrorCode] = 'RETRY_LIMIT',
+                [UpdatedAt] = SYSUTCDATETIME()
+            WHERE [Status] = 'PROCESSING'
+                AND [AttemptCount] >= @MaxAttempts
+                AND [UpdatedAt] < DATEADD(MINUTE, -5, SYSUTCDATETIME());
+
+            ;WITH nextJob AS (
+                SELECT TOP (1) j.[MediaId]
+                FROM [MediaAnalysisJobs] j WITH (UPDLOCK, READPAST, ROWLOCK)
+                INNER JOIN [Media] m ON m.[Id] = j.[MediaId]
+                WHERE m.[Status] <> 'DELETED'
+                    AND m.[MediaUrl] IS NOT NULL
+                    AND j.[AttemptCount] < @MaxAttempts
+                    AND (
+                        (j.[Status] = 'PENDING'
+                            AND (j.[AttemptCount] = 0 OR j.[UpdatedAt] < DATEADD(SECOND, 5, SYSUTCDATETIME())))
+                        OR (j.[Status] = 'PROCESSING' AND j.[UpdatedAt] < DATEADD(MINUTE, -5, SYSUTCDATETIME()))
+                    )
+                ORDER BY j.[CreatedAt], j.[MediaId]
+            )
+            UPDATE j
+            SET [Status] = 'PROCESSING',
+                [AttemptCount] = [AttemptCount] + 1,
+                [UpdatedAt] = SYSUTCDATETIME(),
+                [LastErrorCode] = NULL
+            OUTPUT inserted.[MediaId], m.[MediaUrl], inserted.[AttemptCount]
+            FROM [MediaAnalysisJobs] j
+            INNER JOIN nextJob n ON n.[MediaId] = j.[MediaId]
+            INNER JOIN [Media] m ON m.[Id] = j.[MediaId];
+            """;
+
+        await using var command = new SqlCommand(sql, connection);
+        command.Parameters.Add(new SqlParameter("@MaxAttempts", SqlDbType.Int) { Value = 5 });
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            return null;
+        }
+
+        return new MediaAnalysisWorkItem(reader.GetInt32(0), reader.GetString(1), reader.GetInt32(2));
+    }
+
+    public async Task<bool> HeartbeatAsync(int mediaId, CancellationToken cancellationToken = default)
+    {
+        await using var connection = new SqlConnection(_options.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        const string sql = """
+            UPDATE [MediaAnalysisJobs]
+            SET [UpdatedAt] = SYSUTCDATETIME()
+            WHERE [MediaId] = @MediaId AND [Status] = 'PROCESSING';
+            """;
+
+        await using var command = new SqlCommand(sql, connection);
+        command.Parameters.Add(new SqlParameter("@MediaId", SqlDbType.Int) { Value = mediaId });
+        return await command.ExecuteNonQueryAsync(cancellationToken) > 0;
+    }
+
+    public async Task SaveRecognizedPlatesAsync(
+        int mediaId,
+        IReadOnlyCollection<PlateRecognition> plates,
+        CancellationToken cancellationToken = default)
+    {
+        if (plates.Count == 0)
+        {
+            return;
+        }
+
+        await using var connection = new SqlConnection(_options.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            await using var mediaCommand = new SqlCommand(
+                "SELECT [Status] FROM [Media] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] = @MediaId;",
+                connection,
+                transaction);
+            mediaCommand.Parameters.Add(new SqlParameter("@MediaId", SqlDbType.Int) { Value = mediaId });
+            var mediaStatus = await mediaCommand.ExecuteScalarAsync(cancellationToken) as string;
+            if (mediaStatus is null)
+            {
+                throw new InvalidOperationException($"Media {mediaId} no longer exists.");
+            }
+
+            if (!string.Equals(mediaStatus, "DELETED", StringComparison.OrdinalIgnoreCase))
+            {
+                await SaveRecognizedPlatesInTransactionAsync(
+                    connection,
+                    transaction,
+                    mediaId,
+                    plates,
+                    cancellationToken);
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+
+    public async Task CompleteAsync(
+        int mediaId,
+        IReadOnlyCollection<PlateRecognition> plates,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = new SqlConnection(_options.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            await using var mediaCommand = new SqlCommand(
+                "SELECT [Status] FROM [Media] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] = @MediaId;",
+                connection,
+                transaction);
+            mediaCommand.Parameters.Add(new SqlParameter("@MediaId", SqlDbType.Int) { Value = mediaId });
+            var mediaStatus = await mediaCommand.ExecuteScalarAsync(cancellationToken) as string;
+            if (mediaStatus is null)
+            {
+                throw new InvalidOperationException($"Media {mediaId} no longer exists.");
+            }
+
+            if (!string.Equals(mediaStatus, "DELETED", StringComparison.OrdinalIgnoreCase))
+            {
+                await SaveRecognizedPlatesInTransactionAsync(
+                    connection,
+                    transaction,
+                    mediaId,
+                    plates,
+                    cancellationToken);
+            }
+
+            await using var completeCommand = new SqlCommand(
+                """
+                UPDATE [MediaAnalysisJobs]
+                SET [Status] = 'COMPLETED',
+                    [UpdatedAt] = SYSUTCDATETIME(),
+                    [LastErrorCode] = NULL
+                WHERE [MediaId] = @MediaId;
+                """,
+                connection,
+                transaction);
+            completeCommand.Parameters.Add(new SqlParameter("@MediaId", SqlDbType.Int) { Value = mediaId });
+            if (await completeCommand.ExecuteNonQueryAsync(cancellationToken) == 0)
+            {
+                throw new InvalidOperationException($"Media analysis job {mediaId} no longer exists.");
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+
+    private static async Task SaveRecognizedPlatesInTransactionAsync(
+        SqlConnection connection,
+        SqlTransaction transaction,
+        int mediaId,
+        IReadOnlyCollection<PlateRecognition> plates,
+        CancellationToken cancellationToken)
+    {
+        foreach (var registration in plates
+            .Select(plate => plate.Registration.Trim().ToUpperInvariant())
+            .Distinct(StringComparer.Ordinal))
+        {
+            if (registration.Length is < 4 or > 16
+                || registration.Any(character => !char.IsAsciiLetterOrDigit(character)))
+            {
+                throw new InvalidOperationException("The recognizer returned an invalid registration.");
+            }
+
+            await using var registrationCommand = new SqlCommand(
+                """
+                SELECT [Id]
+                FROM [Registration] WITH (UPDLOCK, HOLDLOCK)
+                WHERE [Number] = @Number;
+                """,
+                connection,
+                transaction);
+            registrationCommand.Parameters.Add(new SqlParameter("@Number", SqlDbType.NVarChar, 16) { Value = registration });
+            var registrationIdValue = await registrationCommand.ExecuteScalarAsync(cancellationToken);
+            int registrationId;
+            if (registrationIdValue is int existingId)
+            {
+                registrationId = existingId;
+            }
+            else
+            {
+                await using var insertRegistrationCommand = new SqlCommand(
+                    """
+                    INSERT INTO [Registration] ([Number])
+                    VALUES (@Number);
+                    SELECT CAST(SCOPE_IDENTITY() AS INT);
+                    """,
+                    connection,
+                    transaction);
+                insertRegistrationCommand.Parameters.Add(new SqlParameter("@Number", SqlDbType.NVarChar, 16) { Value = registration });
+                registrationId = Convert.ToInt32(await insertRegistrationCommand.ExecuteScalarAsync(cancellationToken));
+            }
+
+            await using var relationCommand = new SqlCommand(
+                """
+                IF NOT EXISTS (
+                    SELECT 1 FROM [Rating] WITH (UPDLOCK, HOLDLOCK)
+                    WHERE [RegistrationId] = @RegistrationId AND [MediaId] = @MediaId
+                )
+                BEGIN
+                    INSERT INTO [Rating] ([RegistrationId], [MediaId], [Rating])
+                    VALUES (@RegistrationId, @MediaId, NULL);
+                END;
+                """,
+                connection,
+                transaction);
+            relationCommand.Parameters.Add(new SqlParameter("@RegistrationId", SqlDbType.Int) { Value = registrationId });
+            relationCommand.Parameters.Add(new SqlParameter("@MediaId", SqlDbType.Int) { Value = mediaId });
+            await relationCommand.ExecuteNonQueryAsync(cancellationToken);
+        }
+    }
+
+    public async Task FailAsync(
+        int mediaId,
+        string errorCode,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = new SqlConnection(_options.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        const string sql = """
+            UPDATE [MediaAnalysisJobs]
+            SET [Status] = CASE
+                    WHEN [AttemptCount] >= @MaxAttempts OR @ErrorCode IN ('VIDEO_TOO_LONG', 'INVALID_MEDIA')
+                    THEN 'FAILED'
+                    ELSE 'PENDING'
+                END,
+                [LastErrorCode] = @ErrorCode,
+                [UpdatedAt] = SYSUTCDATETIME()
+            WHERE [MediaId] = @MediaId AND [Status] = 'PROCESSING';
+            """;
+
+        await using var command = new SqlCommand(sql, connection);
+        command.Parameters.Add(new SqlParameter("@MaxAttempts", SqlDbType.Int) { Value = 5 });
+        command.Parameters.Add(new SqlParameter("@ErrorCode", SqlDbType.NVarChar, 64) { Value = errorCode });
+        command.Parameters.Add(new SqlParameter("@MediaId", SqlDbType.Int) { Value = mediaId });
+        if (await command.ExecuteNonQueryAsync(cancellationToken) == 0)
+        {
+            throw new InvalidOperationException($"Media analysis job {mediaId} is not processing.");
+        }
     }
 
     public async Task<bool> UpdateMetadataAsync(
@@ -311,7 +643,7 @@ public sealed class MediaRepository : IMediaRepository
             fileState = FileState.Active;
         }
 
-        return new FileImage(
+        var media = new FileImage(
             id: id,
             fileName: fileName,
             userId: userId,
@@ -322,6 +654,25 @@ public sealed class MediaRepository : IMediaRepository
             state: fileState,
             locationId: locationId,
             location: location);
+        var analysisStatusText = reader.GetString(11);
+        media.SetAnalysisStatus(ParseAnalysisStatus(analysisStatusText));
+
+        return media;
+    }
+
+    private static MediaAnalysisStatus ParseAnalysisStatus(string value)
+    {
+        if (string.Equals(value, "NOT_REQUESTED", StringComparison.OrdinalIgnoreCase))
+        {
+            return MediaAnalysisStatus.NotRequested;
+        }
+
+        if (Enum.TryParse<MediaAnalysisStatus>(value, ignoreCase: true, out var status))
+        {
+            return status;
+        }
+
+        throw new InvalidOperationException($"Unknown media analysis status '{value}'.");
     }
 
 }

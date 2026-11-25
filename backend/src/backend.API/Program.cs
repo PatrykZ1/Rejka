@@ -1,6 +1,7 @@
 using System.Text;
 using backend.API;
 using backend.Infrastructure;
+using backend.Infrastructure.Analysis;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -8,6 +9,7 @@ using Microsoft.OpenApi.Models;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.Configure<PlateRecognitionOptions>(builder.Configuration.GetSection("PlateRecognition"));
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
@@ -69,6 +71,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 builder.Services.AddHostedService<DatabaseMigrationBackgroundService>();
+builder.Services.AddHostedService<MediaAnalysisWorker>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddEndpointsApiExplorer();
 

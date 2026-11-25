@@ -1,7 +1,6 @@
 using System.IO;
 using System.Text;
 using backend.Application.Features.Media;
-using backend.Application.Interfaces.Analysis;
 using backend.Application.Interfaces.Media;
 using backend.Application.Interfaces.Storage;
 using backend.Domain.Locations;
@@ -21,10 +20,9 @@ public sealed class UploadMediaTests
         // Arrange
         var fakeStorage = new FakeBlobStorageService();
         var fakeRepo = new FakeMediaRepository();
-        var fakeQueue = new FakeMediaAnalysisQueue();
         var timeProvider = new TestTimeProvider(Now);
 
-        var useCase = new UploadMedia(fakeStorage, fakeRepo, fakeQueue, timeProvider, NullLogger<UploadMedia>.Instance);
+        var useCase = new UploadMedia(fakeStorage, fakeRepo, timeProvider, NullLogger<UploadMedia>.Instance);
 
         using var memoryStream = new MemoryStream([0xFF, 0xD8, 0xFF, 0x00]);
         var command = new UploadMediaCommand(
@@ -57,7 +55,8 @@ public sealed class UploadMediaTests
         Assert.Single(fakeRepo.AddedMedia);
         Assert.Equal(1, fakeRepo.AddedMedia[0].Id);
         Assert.Contains(fakeRepo.ActivityRecords, r => r.Action == "UPLOAD" && r.MediaId == 1);
-        Assert.Contains(1, fakeQueue.EnqueuedMediaIds);
+        Assert.True(fakeRepo.AnalysisRequested.Single());
+        Assert.Equal(MediaAnalysisStatus.Pending, result.Media.AnalysisStatus);
     }
 
     [Fact]
@@ -66,10 +65,9 @@ public sealed class UploadMediaTests
         // Arrange
         var fakeStorage = new FakeBlobStorageService();
         var fakeRepo = new FakeMediaRepository();
-        var fakeQueue = new FakeMediaAnalysisQueue();
         var timeProvider = new TestTimeProvider(Now);
 
-        var useCase = new UploadMedia(fakeStorage, fakeRepo, fakeQueue, timeProvider, NullLogger<UploadMedia>.Instance);
+        var useCase = new UploadMedia(fakeStorage, fakeRepo, timeProvider, NullLogger<UploadMedia>.Instance);
 
         using var memoryStream = new MemoryStream([1, 2, 3]);
         var command = new UploadMediaCommand(
@@ -94,10 +92,9 @@ public sealed class UploadMediaTests
         // Arrange
         var fakeStorage = new FakeBlobStorageService();
         var fakeRepo = new FakeMediaRepository();
-        var fakeQueue = new FakeMediaAnalysisQueue();
         var timeProvider = new TestTimeProvider(Now);
 
-        var useCase = new UploadMedia(fakeStorage, fakeRepo, fakeQueue, timeProvider, NullLogger<UploadMedia>.Instance);
+        var useCase = new UploadMedia(fakeStorage, fakeRepo, timeProvider, NullLogger<UploadMedia>.Instance);
 
         using var emptyStream = new MemoryStream([]);
         var command = new UploadMediaCommand(
@@ -121,7 +118,6 @@ public sealed class UploadMediaTests
         var useCase = new UploadMedia(
             new FakeBlobStorageService(),
             new FakeMediaRepository(),
-            new FakeMediaAnalysisQueue(),
             new TestTimeProvider(Now),
             NullLogger<UploadMedia>.Instance);
 
@@ -138,7 +134,6 @@ public sealed class UploadMediaTests
         var useCase = new UploadMedia(
             storage,
             new FakeMediaRepository(),
-            new FakeMediaAnalysisQueue(),
             new TestTimeProvider(Now),
             NullLogger<UploadMedia>.Instance);
 
@@ -152,17 +147,17 @@ public sealed class UploadMediaTests
     [Theory]
     [InlineData("video.mp4", "video/mp4", "isom", "video/mp4")]
     [InlineData("video.MOV", "video/quicktime", "qt  ", "video/quicktime")]
-    public async Task UploadMedia_AcceptsMp4AndMovFiles(
+    public async Task UploadMedia_AcceptsMp4AndMovFilesAndQueuesAnalysis(
         string fileName,
         string contentType,
         string majorBrand,
         string expectedStoredContentType)
     {
         var storage = new FakeBlobStorageService();
+        var repository = new FakeMediaRepository();
         var useCase = new UploadMedia(
             storage,
-            new FakeMediaRepository(),
-            new FakeMediaAnalysisQueue(),
+            repository,
             new TestTimeProvider(Now),
             NullLogger<UploadMedia>.Instance);
 
@@ -171,6 +166,8 @@ public sealed class UploadMediaTests
 
         Assert.Equal(UploadMediaStatus.Success, result.Status);
         Assert.Equal(expectedStoredContentType, Assert.Single(storage.UploadedBlobs).ContentType);
+        Assert.True(repository.AnalysisRequested.Single());
+        Assert.Equal(MediaAnalysisStatus.Pending, result.Media!.AnalysisStatus);
     }
 
     [Theory]
@@ -185,7 +182,6 @@ public sealed class UploadMediaTests
         var useCase = new UploadMedia(
             storage,
             new FakeMediaRepository(),
-            new FakeMediaAnalysisQueue(),
             new TestTimeProvider(Now),
             NullLogger<UploadMedia>.Instance);
 
@@ -203,7 +199,6 @@ public sealed class UploadMediaTests
         var useCase = new UploadMedia(
             storage,
             new FakeMediaRepository(),
-            new FakeMediaAnalysisQueue(),
             new TestTimeProvider(Now),
             NullLogger<UploadMedia>.Instance);
 
@@ -228,7 +223,6 @@ public sealed class UploadMediaTests
         var useCase = new UploadMedia(
             storage,
             repository,
-            new FakeMediaAnalysisQueue(),
             new TestTimeProvider(Now),
             NullLogger<UploadMedia>.Instance);
 
@@ -251,7 +245,6 @@ public sealed class UploadMediaTests
         var useCase = new UploadMedia(
             storage,
             new FakeMediaRepository(),
-            new FakeMediaAnalysisQueue(),
             new TestTimeProvider(Now),
             NullLogger<UploadMedia>.Instance);
 
@@ -272,7 +265,6 @@ public sealed class UploadMediaTests
         var useCase = new UploadMedia(
             storage,
             new FakeMediaRepository(),
-            new FakeMediaAnalysisQueue(),
             new TestTimeProvider(Now),
             NullLogger<UploadMedia>.Instance);
 
@@ -321,6 +313,11 @@ public sealed class UploadMediaTests
             DeletedBlobs.Add(blobName);
             return Task.CompletedTask;
         }
+
+        public Task<Stream> DownloadBlobAsync(string blobName, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<Stream>(new MemoryStream());
+        }
     }
 
     private sealed class FakeMediaRepository : IMediaRepository
@@ -329,11 +326,13 @@ public sealed class UploadMediaTests
         public bool ThrowOnAdd { get; init; }
         public List<MediaFile> AddedMedia { get; } = [];
         public List<(int MediaId, string Action, DateTimeOffset OccurredAt)> ActivityRecords { get; } = [];
+        public List<bool> AnalysisRequested { get; } = [];
 
         public Task<int> AddWithActivityRecordAsync(
             MediaFile media,
             string action,
             DateTimeOffset occurredAt,
+            bool enqueueMediaAnalysis = false,
             CancellationToken cancellationToken = default)
         {
             if (ThrowOnAdd)
@@ -345,6 +344,7 @@ public sealed class UploadMediaTests
             media.SetId(_currentId);
             AddedMedia.Add(media);
             ActivityRecords.Add((_currentId, action, occurredAt));
+            AnalysisRequested.Add(enqueueMediaAnalysis);
             return Task.FromResult(_currentId);
         }
 
@@ -406,16 +406,11 @@ public sealed class UploadMediaTests
             return Task.FromResult(media.ChangeState(FileState.Deleted));
         }
 
-    }
-
-    private sealed class FakeMediaAnalysisQueue : IMediaAnalysisQueue
-    {
-        public List<int> EnqueuedMediaIds { get; } = [];
-
-        public ValueTask EnqueueAnalysisAsync(int mediaId, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyDictionary<int, IReadOnlyList<string>>> GetRegistrationsByMediaIdsAsync(
+            IReadOnlyCollection<int> mediaIds,
+            CancellationToken cancellationToken = default)
         {
-            EnqueuedMediaIds.Add(mediaId);
-            return ValueTask.CompletedTask;
+            return Task.FromResult<IReadOnlyDictionary<int, IReadOnlyList<string>>>(new Dictionary<int, IReadOnlyList<string>>());
         }
     }
 }

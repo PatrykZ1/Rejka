@@ -77,6 +77,17 @@ public sealed class AzureBlobStorageService : IBlobStorageService
         return blobClient.Uri.ToString();
     }
 
+    public async Task<Stream> DownloadBlobAsync(
+        string blobName,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(blobName);
+
+        var blobClient = _containerClient.GetBlobClient(blobName);
+        var response = await blobClient.DownloadStreamingAsync(cancellationToken: cancellationToken);
+        return response.Value.Content;
+    }
+
     public async Task DeleteBlobAsync(string blobName, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(blobName);
