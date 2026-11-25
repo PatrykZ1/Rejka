@@ -14,6 +14,7 @@ public abstract class File
     public DateTimeOffset UploadedAt { get; protected set; }
     public FileState State { get; protected set; }
     public string? MediaUrl { get; protected set; }
+    public MediaAnalysisStatus AnalysisStatus { get; private set; } = MediaAnalysisStatus.NotRequested;
 
     protected File(
         string fileName,
@@ -73,6 +74,11 @@ public abstract class File
     public void SetMediaUrl(string mediaUrl)
     {
         MediaUrl = mediaUrl;
+    }
+
+    public void SetAnalysisStatus(MediaAnalysisStatus status)
+    {
+        AnalysisStatus = status;
     }
 
     public void UpdateMetadata(

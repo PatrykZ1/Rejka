@@ -16,6 +16,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="..\..\models\*.onnx" Link="Models\%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\backend.Application\backend.Application.csproj" />
     <ProjectReference Include="..\backend.Infrastructure\backend.Infrastructure.csproj" />
   </ItemGroup>

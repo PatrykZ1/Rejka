@@ -12,6 +12,7 @@ COPY ["src/backend.Domain/backend.Domain.csproj", "src/backend.Domain/"]
 COPY ["src/backend.Application/backend.Application.csproj", "src/backend.Application/"]
 COPY ["src/backend.Infrastructure/backend.Infrastructure.csproj", "src/backend.Infrastructure/"]
 COPY ["src/backend.API/backend.API.csproj", "src/backend.API/"]
+COPY ["models/", "models/"]
 
 RUN dotnet restore "src/backend.API/backend.API.csproj"
 

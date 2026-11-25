@@ -1,4 +1,3 @@
-using backend.Application.Interfaces.Analysis;
 using backend.Application.Interfaces.Media;
 using backend.Application.Interfaces.Storage;
 using backend.Domain.Locations;
@@ -36,20 +35,17 @@ public sealed class UploadMedia
 {
     private readonly IBlobStorageService _blobStorageService;
     private readonly IMediaRepository _mediaRepository;
-    private readonly IMediaAnalysisQueue _analysisQueue;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<UploadMedia> _logger;
 
     public UploadMedia(
         IBlobStorageService blobStorageService,
         IMediaRepository mediaRepository,
-        IMediaAnalysisQueue analysisQueue,
         TimeProvider timeProvider,
         ILogger<UploadMedia> logger)
     {
         _blobStorageService = blobStorageService;
         _mediaRepository = mediaRepository;
-        _analysisQueue = analysisQueue;
         _timeProvider = timeProvider;
         _logger = logger;
     }
@@ -137,7 +133,13 @@ public sealed class UploadMedia
         int mediaId;
         try
         {
-            mediaId = await _mediaRepository.AddWithActivityRecordAsync(media, "UPLOAD", now, cancellationToken);
+            var analyzeImage = normalizedContentType is "image/jpeg" or "image/png";
+            mediaId = await _mediaRepository.AddWithActivityRecordAsync(
+                media,
+                "UPLOAD",
+                now,
+                enqueueImageAnalysis: analyzeImage,
+                cancellationToken);
         }
         catch (Exception ex)
         {
@@ -147,8 +149,10 @@ public sealed class UploadMedia
         }
 
         media.SetId(mediaId);
-
-        await _analysisQueue.EnqueueAnalysisAsync(mediaId, cancellationToken);
+        if (normalizedContentType is "image/jpeg" or "image/png")
+        {
+            media.SetAnalysisStatus(Domain.Media.MediaAnalysisStatus.Pending);
+        }
 
         return new UploadMediaResult(UploadMediaStatus.Success, Media: media, SasUrl: sasUrl);
     }

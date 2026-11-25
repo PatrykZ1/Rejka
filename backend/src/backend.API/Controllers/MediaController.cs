@@ -98,9 +98,13 @@ public sealed class MediaController : ControllerBase
 
         var total = await _mediaRepository.CountByUserAsync(userId.Value, cancellationToken);
         var media = await _mediaRepository.GetByUserAsync(userId.Value, page, pageSize, cancellationToken);
+        var registrations = await _mediaRepository.GetRegistrationsByMediaIdsAsync(
+            media.Select(item => item.Id).ToArray(),
+            cancellationToken);
         var items = media.Select(item => MapToResponse(
             item,
-            item.MediaUrl is null ? null : _blobStorageService.GenerateSasUri(item.MediaUrl, TimeSpan.FromHours(24))))
+            item.MediaUrl is null ? null : _blobStorageService.GenerateSasUri(item.MediaUrl, TimeSpan.FromHours(24)),
+            registrations.GetValueOrDefault(item.Id, Array.Empty<string>())))
             .ToArray();
 
         var totalPages = (int)Math.Ceiling(total / (double)pageSize);
@@ -135,7 +139,11 @@ public sealed class MediaController : ControllerBase
         var sasUrl = media.MediaUrl is null
             ? null
             : _blobStorageService.GenerateSasUri(media.MediaUrl, TimeSpan.FromHours(24));
-        return Ok(MapToResponse(media, sasUrl));
+        var registrations = await _mediaRepository.GetRegistrationsByMediaIdsAsync([media.Id], cancellationToken);
+        return Ok(MapToResponse(
+            media,
+            sasUrl,
+            registrations.GetValueOrDefault(media.Id, Array.Empty<string>())));
     }
 
     [Authorize]
@@ -227,7 +235,11 @@ public sealed class MediaController : ControllerBase
         var sasUrl = media?.MediaUrl is null
             ? null
             : _blobStorageService.GenerateSasUri(media.MediaUrl, TimeSpan.FromHours(24));
-        return Ok(MapToResponse(media!, sasUrl));
+        var registrations = await _mediaRepository.GetRegistrationsByMediaIdsAsync([media!.Id], cancellationToken);
+        return Ok(MapToResponse(
+            media,
+            sasUrl,
+            registrations.GetValueOrDefault(media.Id, Array.Empty<string>())));
     }
 
     [Authorize]
@@ -283,7 +295,10 @@ public sealed class MediaController : ControllerBase
         return null;
     }
 
-    private static MediaItemResponse MapToResponse(Domain.Media.File media, string? sasUrl)
+    private static MediaItemResponse MapToResponse(
+        Domain.Media.File media,
+        string? sasUrl,
+        IReadOnlyList<string>? registrations = null)
     {
         return new MediaItemResponse(
             Id: media.Id,
@@ -295,7 +310,8 @@ public sealed class MediaController : ControllerBase
             RecordedAt: media.RecordedAt?.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
             UploadedAt: media.UploadedAt.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture),
             Comment: media.Comment ?? string.Empty,
-            Registrations: Array.Empty<string>(),
-            Ratings: Array.Empty<RegistrationRatingResponse>());
+            Registrations: registrations ?? Array.Empty<string>(),
+            Ratings: Array.Empty<RegistrationRatingResponse>(),
+            AnalysisStatus: media.AnalysisStatus.ToString().ToUpperInvariant());
     }
 }
