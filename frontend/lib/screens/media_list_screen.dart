@@ -103,13 +103,29 @@ class _MediaListScreenState extends State<MediaListScreen> {
         if (index == 0) {
           return Padding(
             padding: const EdgeInsets.all(12),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: OutlinedButton.icon(
-                onPressed: _showFilterDialog,
-                icon: const Icon(Icons.filter_list),
-                label: const Text('Filtry'),
-              ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: _showFilterDialog,
+                      icon: const Icon(Icons.filter_list),
+                      label: const Text('Filtry'),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.push('/media/upload'),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Dodaj plik'),
+                    ),
+                  ),
+                ),
+              ],
             ),
           );
         }
@@ -129,7 +145,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Filtry'),
-        content: const Text(''),
+        content: const Text('filtry'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -152,10 +168,12 @@ class _MediaListScreenState extends State<MediaListScreen> {
         ),
       ),
       onTap: () {
-        context.push('/media/${item.id}');
+        context.push('/media/contents/${item.id}');
       },
       title: Text(item.fileName, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text(formatter.format(item.recordedAt)),
+      subtitle: Text(
+        item.recordedAt != null ? formatter.format(item.recordedAt!) : '',
+      ),
     );
   }
 

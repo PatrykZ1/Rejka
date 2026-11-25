@@ -128,7 +128,7 @@ class _RegistrationListScreenState extends State<RegistrationListScreen> {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       onTap: () {
-        context.push('/registration/${item.number}');
+        context.push('/registration/contents/${item.number}');
       },
       title: Align(
         alignment: Alignment.centerLeft,

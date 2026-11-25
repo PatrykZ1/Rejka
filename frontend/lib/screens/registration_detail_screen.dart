@@ -118,6 +118,9 @@ class _RegistrationDetailScreenState extends State<RegistrationDetailScreen> {
 
   Widget _buildMediaTile(MediaItem item) {
     final formatter = DateFormat.yMMMMd('pl_PL').add_Hms();
+    final recordedAt = item.recordedAt != null
+        ? Text(formatter.format(item.recordedAt!))
+        : Text('Brak podanej daty.');
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: SizedBox(
@@ -128,9 +131,9 @@ class _RegistrationDetailScreenState extends State<RegistrationDetailScreen> {
           child: MediaThumbnail(url: item.url, fileName: item.fileName),
         ),
       ),
-      onTap: () => context.push('/media/${item.id}'),
+      onTap: () => context.push('/media/contents/${item.id}'),
       title: Text(item.fileName, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text(formatter.format(item.recordedAt)),
+      subtitle: recordedAt,
     );
   }
 

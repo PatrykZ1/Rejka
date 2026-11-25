@@ -116,7 +116,7 @@ class ApiCore {
       if (e.type == DioExceptionType.badResponse) {
         rethrow;
       }
-      throw ApiResponseException('Błąd połączenia z serwerem');
+      throw ApiResponseException('Błąd połączenia z serwerem: ${e.message}');
     }
   }
 

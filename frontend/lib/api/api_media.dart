@@ -1,7 +1,10 @@
+import 'package:boundingbox/api/models/request/media_upload_request.dart';
 import 'package:boundingbox/api/models/response/media_item_response.dart';
 import 'package:boundingbox/api/models/response/paginated_media_response.dart';
 import 'package:boundingbox/api/models/response/registration_rating_response.dart';
 import 'package:boundingbox/models/media_filter.dart';
+
+import 'api_core.dart';
 
 class ApiMedia {
   // Mock instance used for tests only
@@ -13,7 +16,7 @@ class ApiMedia {
   }
   ApiMedia._internal();
 
-  //final ApiCore _api = ApiCore();
+  final ApiCore _api = ApiCore();
 
   static Map<int, MediaItemResponse> medias = {
     0: MediaItemResponse(
@@ -175,6 +178,9 @@ class ApiMedia {
       ratings: [RegistrationRatingResponse(registration: 'WI86767', rating: 8)],
     ),
   };
+
+  Future<void> mediaUpload(MediaUploadRequest request) async =>
+      _api.post('/media/upload', data: await request.toFormData());
 
   Future<MediaItemResponse?> getMediaItem(int id) async {
     await Future.delayed(const Duration(milliseconds: 500));

@@ -257,18 +257,22 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
   Widget _buildInfoSection(MediaItem item) {
     final formatter = DateFormat.yMMMMd('pl_PL').add_Hms();
 
-    return Column(
-      children: [
-        _buildInfoTile(
-          'Położenie',
-          Row(
+    final recordedAt = item.recordedAt != null
+        ? Text(formatter.format(item.recordedAt!))
+        : Text('Brak podanej daty.');
+    final location = item.latitude != null && item.latitude != null
+        ? Row(
             children: [
               Expanded(child: Center(child: Text('${item.latitude}°'))),
               Expanded(child: Center(child: Text('${item.longitude}°'))),
             ],
-          ),
-        ),
-        _buildInfoTile('Nagrano dnia', Text(formatter.format(item.recordedAt))),
+          )
+        : Text('Brak położenia.');
+
+    return Column(
+      children: [
+        _buildInfoTile('Położenie', location),
+        _buildInfoTile('Nagrano dnia', recordedAt),
         _buildInfoTile('Wgrano dnia', Text(formatter.format(item.uploadedAt))),
         _buildInfoTile(
           'Komentarz',
@@ -298,7 +302,7 @@ class _MediaDetailScreenState extends State<MediaDetailScreen> {
         return ListTile(
           contentPadding: EdgeInsets.zero,
           onTap: () {
-            context.push('/registration/$registration');
+            context.push('/registration/contents/$registration');
           },
           title: Text(registration),
           trailing: rating != null

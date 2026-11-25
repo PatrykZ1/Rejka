@@ -50,7 +50,7 @@ class AppDrawer extends StatelessWidget {
             title: const Text('Twoje media'),
             onTap: () {
               Navigator.pop(context);
-              context.go('/media');
+              context.go('/media/contents');
             },
           ),
 
@@ -59,7 +59,7 @@ class AppDrawer extends StatelessWidget {
             title: const Text('Rejestracje'),
             onTap: () {
               Navigator.pop(context);
-              context.go('/registration');
+              context.go('/registration/contents');
             },
           ),
 

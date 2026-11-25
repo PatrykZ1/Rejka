@@ -6,9 +6,9 @@ class MediaItem {
   final int userId;
   final String url;
   final String fileName;
-  final double latitude;
-  final double longitude;
-  final DateTime recordedAt;
+  final double? latitude;
+  final double? longitude;
+  final DateTime? recordedAt;
   final DateTime uploadedAt;
   final String comment;
   final List<String> registrations;
@@ -19,9 +19,9 @@ class MediaItem {
     required this.userId,
     required this.url,
     required this.fileName,
-    required this.latitude,
-    required this.longitude,
-    required this.recordedAt,
+    this.latitude,
+    this.longitude,
+    this.recordedAt,
     required this.uploadedAt,
     required this.comment,
     required this.registrations,
@@ -36,7 +36,7 @@ class MediaItem {
       longitude = response.longitude,
       recordedAt = response.recordedAt,
       uploadedAt = response.uploadedAt,
-      comment = response.comment,
+      comment = response.comment ?? '',
       registrations = response.registrations,
       ratings = response.ratings
           .map((r) => RegistrationRating.fromResponse(r))
