@@ -27,7 +27,7 @@ services:
     restart: unless-stopped
     ports:
       - "10000:10000"
-    command: "azurite-blob --blobHost 0.0.0.0 --blobPort 10000"
+    command: "azurite-blob --blobHost 0.0.0.0 --blobPort 10000 --skipApiVersionCheck"
     volumes:
       - rejka-blob-data:/data
     networks:
@@ -44,6 +44,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
+      - Logging__LogLevel__backend.Infrastructure.Analysis=Debug
       - ConnectionStrings__DefaultConnection=Server=db,1433;Database=RejkaDb;User Id=sa;Password=YourStrong@Password123!;TrustServerCertificate=True;Encrypt=False;
       - Authentication__Jwt__Issuer=RejkaApi
       - Authentication__Jwt__Audience=RejkaApp

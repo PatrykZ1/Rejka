@@ -1,5 +1,6 @@
 using System.Text;
 using backend.Application.Interfaces.Analysis;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
@@ -24,10 +25,14 @@ public sealed class OnnxPlateRecognitionService : IPlateRecognitionService, IDis
     private readonly string _ocrInputName;
     private readonly string _ocrOutputName;
     private readonly PlateRecognitionOptions _options;
+    private readonly ILogger<OnnxPlateRecognitionService> _logger;
 
-    public OnnxPlateRecognitionService(IOptions<PlateRecognitionOptions> options)
+    public OnnxPlateRecognitionService(
+        IOptions<PlateRecognitionOptions> options,
+        ILogger<OnnxPlateRecognitionService> logger)
     {
         _options = options.Value;
+        _logger = logger;
         ValidateOptions(_options);
 
         _detector = new InferenceSession(ResolveModelPath(_options.DetectorModelPath));
@@ -61,6 +66,7 @@ public sealed class OnnxPlateRecognitionService : IPlateRecognitionService, IDis
         buffer.Position = 0;
 
         using var image = DecodeOrientedImage(buffer);
+        _logger.LogDebug("Decoded image for plate analysis: {Width}x{Height}.", image.Width, image.Height);
 
         var transform = CreateLetterboxTransform(image.Width, image.Height);
         using var letterboxed = CreateLetterboxedImage(image, transform);
@@ -70,29 +76,65 @@ public sealed class OnnxPlateRecognitionService : IPlateRecognitionService, IDis
         ]);
         var detectorOutput = detectorResults.Single(result => result.Name == _detectorOutputName).AsTensor<float>();
         var boxes = DecodeDetections(detectorOutput, transform, image.Width, image.Height);
+        _logger.LogDebug(
+            "Plate detector returned {DetectionCount} boxes after NMS (confidence threshold {Threshold}).",
+            boxes.Count,
+            _options.DetectionConfidenceThreshold);
 
         var results = new List<PlateRecognition>(boxes.Count);
         var accepted = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var box in boxes)
+        for (var index = 0; index < boxes.Count; index++)
         {
+            var box = boxes[index];
             cancellationToken.ThrowIfCancellationRequested();
             using var crop = CreatePlateCrop(image, box);
             if (crop is null)
             {
+                _logger.LogDebug(
+                    "Detection {DetectionIndex} rejected before OCR: crop too small; confidence {Confidence:F3}; box ({Left:F0},{Top:F0})-({Right:F0},{Bottom:F0}).",
+                    index,
+                    box.Confidence,
+                    box.Left,
+                    box.Top,
+                    box.Right,
+                    box.Bottom);
                 continue;
             }
 
-            var (registration, confidence) = RecognizeCrop(crop);
-            if (registration is null
-                || confidence < _options.MinimumOcrConfidence
-                || !accepted.Add(registration))
+            var reading = RecognizeCrop(crop);
+            var rejectionReason = reading.Registration is null
+                ? "invalid plate format"
+                : reading.Confidence < _options.MinimumOcrConfidence
+                    ? "OCR confidence below threshold"
+                    : accepted.Contains(reading.Registration)
+                        ? "duplicate reading"
+                        : null;
+
+            _logger.LogDebug(
+                "OCR detection {DetectionIndex}: box confidence {DetectionConfidence:F3}, crop {CropWidth}x{CropHeight}, raw text '{RawText}', registration '{Registration}', OCR confidence {OcrConfidence:F3}, accepted {Accepted}{RejectionReason}.",
+                index,
+                box.Confidence,
+                crop.Width,
+                crop.Height,
+                reading.RawText,
+                reading.Registration,
+                reading.Confidence,
+                rejectionReason is null,
+                rejectionReason is null ? string.Empty : $"; rejected: {rejectionReason}");
+
+            if (rejectionReason is not null)
             {
                 continue;
             }
 
-            results.Add(new PlateRecognition(registration, box.Confidence, confidence));
+            if (reading.Registration is { } registration)
+            {
+                accepted.Add(registration);
+                results.Add(new PlateRecognition(registration, box.Confidence, reading.Confidence));
+            }
         }
 
+        _logger.LogDebug("Plate analysis completed: {AcceptedCount} registration readings accepted.", results.Count);
         return results;
     }
 
@@ -283,6 +325,7 @@ public sealed class OnnxPlateRecognitionService : IPlateRecognitionService, IDis
     {
         var values = output.ToArray();
         var candidates = new List<Detection>();
+        var candidatesAboveThreshold = 0;
         const int anchors = 8400;
 
         for (var index = 0; index < anchors; index++)
@@ -292,11 +335,12 @@ public sealed class OnnxPlateRecognitionService : IPlateRecognitionService, IDis
             {
                 continue;
             }
+            candidatesAboveThreshold++;
 
-            var centerX = values[index];
-            var centerY = values[anchors + index];
-            var width = values[2 * anchors + index];
-            var height = values[3 * anchors + index];
+            var centerX = values[index] * DetectorSize;
+            var centerY = values[anchors + index] * DetectorSize;
+            var width = values[2 * anchors + index] * DetectorSize;
+            var height = values[3 * anchors + index] * DetectorSize;
             if (!float.IsFinite(centerX) || !float.IsFinite(centerY)
                 || !float.IsFinite(width) || !float.IsFinite(height)
                 || width <= 0 || height <= 0)
@@ -334,6 +378,11 @@ public sealed class OnnxPlateRecognitionService : IPlateRecognitionService, IDis
             }
         }
 
+        _logger.LogDebug(
+            "Detector candidates: {AboveThresholdCount} above confidence threshold, {ValidBoxCount} valid boxes, {AfterNmsCount} after NMS.",
+            candidatesAboveThreshold,
+            candidates.Count,
+            kept.Count);
         return kept;
     }
 
@@ -358,7 +407,7 @@ public sealed class OnnxPlateRecognitionService : IPlateRecognitionService, IDis
         return crop;
     }
 
-    private (string? Registration, float Confidence) RecognizeCrop(SKBitmap crop)
+    private OcrReading RecognizeCrop(SKBitmap crop)
     {
         using var resized = crop.Resize(
             new SKImageInfo(OcrWidth, OcrHeight, SKColorType.Rgba8888, SKAlphaType.Premul),
@@ -434,17 +483,18 @@ public sealed class OnnxPlateRecognitionService : IPlateRecognitionService, IDis
             }
         }
 
-        var registration = text.ToString().TrimEnd('_');
-        if (registration.Length is < 4 or > 8
-            || registration.Any(character => !char.IsAsciiLetterOrDigit(character)))
-        {
-            return (null, 0);
-        }
-
         var overallConfidence = characterCount == 0
             ? 0
             : (float)Math.Exp(logConfidence / characterCount);
-        return (registration, overallConfidence);
+        var rawText = text.ToString();
+        var registration = rawText.TrimEnd('_');
+        if (registration.Length is < 4 or > 8
+            || registration.Any(character => !char.IsAsciiLetterOrDigit(character)))
+        {
+            return new OcrReading(rawText, null, overallConfidence);
+        }
+
+        return new OcrReading(rawText, registration, overallConfidence);
     }
 
     private static float SoftmaxMaximum(float[] values, int start, double max)
@@ -472,5 +522,6 @@ public sealed class OnnxPlateRecognitionService : IPlateRecognitionService, IDis
     }
 
     private sealed record Detection(double Left, double Top, double Right, double Bottom, float Confidence);
+    private sealed record OcrReading(string RawText, string? Registration, float Confidence);
     private sealed record LetterboxTransform(int ResizedWidth, int ResizedHeight, int Left, int Top, double ScaleX, double ScaleY);
 }
