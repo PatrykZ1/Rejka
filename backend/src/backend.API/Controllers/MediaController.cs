@@ -14,6 +14,8 @@ namespace backend.API.Controllers;
 [Route("media")]
 public sealed class MediaController : ControllerBase
 {
+    private const long MaxUploadSizeBytes = 1024L * 1024 * 1024;
+
     private readonly UploadMedia _uploadMedia;
     private readonly IMediaRepository _mediaRepository;
     private readonly IBlobStorageService _blobStorageService;
@@ -34,6 +36,8 @@ public sealed class MediaController : ControllerBase
     [Authorize]
     [HttpPost("upload")]
     [Consumes("multipart/form-data")]
+    [RequestSizeLimit(MaxUploadSizeBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = MaxUploadSizeBytes)]
     [ProducesResponseType(typeof(MediaItemResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

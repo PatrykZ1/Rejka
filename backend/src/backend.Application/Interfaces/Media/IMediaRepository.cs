@@ -8,7 +8,7 @@ public interface IMediaRepository
         MediaFile media,
         string action,
         DateTimeOffset occurredAt,
-        bool enqueueImageAnalysis = false,
+        bool enqueueMediaAnalysis = false,
         CancellationToken cancellationToken = default);
     Task<MediaFile?> GetByIdAsync(int mediaId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<MediaFile>> GetByUserAsync(

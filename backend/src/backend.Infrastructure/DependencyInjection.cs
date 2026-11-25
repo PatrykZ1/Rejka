@@ -48,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<IBlobStorageService, AzureBlobStorageService>();
         services.AddScoped<IMediaAnalysisRepository, MediaRepository>();
         services.AddSingleton<IPlateRecognitionService, OnnxPlateRecognitionService>();
+        services.AddSingleton<IVideoFrameExtractor, FfmpegVideoFrameExtractor>();
 
         // Authentication & hashing
         services.Configure<PasswordHasherOptions>(options =>

@@ -147,7 +147,7 @@ public sealed class UploadMediaTests
     [Theory]
     [InlineData("video.mp4", "video/mp4", "isom", "video/mp4")]
     [InlineData("video.MOV", "video/quicktime", "qt  ", "video/quicktime")]
-    public async Task UploadMedia_AcceptsMp4AndMovFiles(
+    public async Task UploadMedia_AcceptsMp4AndMovFilesAndQueuesAnalysis(
         string fileName,
         string contentType,
         string majorBrand,
@@ -166,7 +166,8 @@ public sealed class UploadMediaTests
 
         Assert.Equal(UploadMediaStatus.Success, result.Status);
         Assert.Equal(expectedStoredContentType, Assert.Single(storage.UploadedBlobs).ContentType);
-        Assert.False(repository.AnalysisRequested.Single());
+        Assert.True(repository.AnalysisRequested.Single());
+        Assert.Equal(MediaAnalysisStatus.Pending, result.Media!.AnalysisStatus);
     }
 
     [Theory]
@@ -331,7 +332,7 @@ public sealed class UploadMediaTests
             MediaFile media,
             string action,
             DateTimeOffset occurredAt,
-            bool enqueueImageAnalysis = false,
+            bool enqueueMediaAnalysis = false,
             CancellationToken cancellationToken = default)
         {
             if (ThrowOnAdd)
@@ -343,7 +344,7 @@ public sealed class UploadMediaTests
             media.SetId(_currentId);
             AddedMedia.Add(media);
             ActivityRecords.Add((_currentId, action, occurredAt));
-            AnalysisRequested.Add(enqueueImageAnalysis);
+            AnalysisRequested.Add(enqueueMediaAnalysis);
             return Task.FromResult(_currentId);
         }
 

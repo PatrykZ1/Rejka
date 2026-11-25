@@ -23,7 +23,7 @@ public sealed class MediaRepository : IMediaRepository, IMediaAnalysisRepository
         MediaFile media,
         string action,
         DateTimeOffset occurredAt,
-        bool enqueueImageAnalysis = false,
+        bool enqueueMediaAnalysis = false,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(media);
@@ -80,7 +80,7 @@ public sealed class MediaRepository : IMediaRepository, IMediaAnalysisRepository
                 throw new InvalidOperationException("Nie udało się pobrać identyfikatora utworzonego rekordu Media.");
             }
 
-            if (enqueueImageAnalysis)
+            if (enqueueMediaAnalysis)
             {
                 const string insertAnalysisJobSql = """
                     INSERT INTO [MediaAnalysisJobs] ([MediaId], [Status], [AttemptCount], [CreatedAt], [UpdatedAt])
@@ -319,6 +319,68 @@ public sealed class MediaRepository : IMediaRepository, IMediaAnalysisRepository
         return new MediaAnalysisWorkItem(reader.GetInt32(0), reader.GetString(1), reader.GetInt32(2));
     }
 
+    public async Task<bool> HeartbeatAsync(int mediaId, CancellationToken cancellationToken = default)
+    {
+        await using var connection = new SqlConnection(_options.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+
+        const string sql = """
+            UPDATE [MediaAnalysisJobs]
+            SET [UpdatedAt] = SYSUTCDATETIME()
+            WHERE [MediaId] = @MediaId AND [Status] = 'PROCESSING';
+            """;
+
+        await using var command = new SqlCommand(sql, connection);
+        command.Parameters.Add(new SqlParameter("@MediaId", SqlDbType.Int) { Value = mediaId });
+        return await command.ExecuteNonQueryAsync(cancellationToken) > 0;
+    }
+
+    public async Task SaveRecognizedPlatesAsync(
+        int mediaId,
+        IReadOnlyCollection<PlateRecognition> plates,
+        CancellationToken cancellationToken = default)
+    {
+        if (plates.Count == 0)
+        {
+            return;
+        }
+
+        await using var connection = new SqlConnection(_options.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            await using var mediaCommand = new SqlCommand(
+                "SELECT [Status] FROM [Media] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] = @MediaId;",
+                connection,
+                transaction);
+            mediaCommand.Parameters.Add(new SqlParameter("@MediaId", SqlDbType.Int) { Value = mediaId });
+            var mediaStatus = await mediaCommand.ExecuteScalarAsync(cancellationToken) as string;
+            if (mediaStatus is null)
+            {
+                throw new InvalidOperationException($"Media {mediaId} no longer exists.");
+            }
+
+            if (!string.Equals(mediaStatus, "DELETED", StringComparison.OrdinalIgnoreCase))
+            {
+                await SaveRecognizedPlatesInTransactionAsync(
+                    connection,
+                    transaction,
+                    mediaId,
+                    plates,
+                    cancellationToken);
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+
     public async Task CompleteAsync(
         int mediaId,
         IReadOnlyCollection<PlateRecognition> plates,
@@ -343,62 +405,12 @@ public sealed class MediaRepository : IMediaRepository, IMediaAnalysisRepository
 
             if (!string.Equals(mediaStatus, "DELETED", StringComparison.OrdinalIgnoreCase))
             {
-                foreach (var registration in plates
-                    .Select(plate => plate.Registration.Trim().ToUpperInvariant())
-                    .Distinct(StringComparer.Ordinal))
-                {
-                    if (registration.Length is < 4 or > 16
-                        || registration.Any(character => !char.IsAsciiLetterOrDigit(character)))
-                    {
-                        throw new InvalidOperationException("The recognizer returned an invalid registration.");
-                    }
-
-                    await using var registrationCommand = new SqlCommand(
-                        """
-                        SELECT [Id]
-                        FROM [Registration] WITH (UPDLOCK, HOLDLOCK)
-                        WHERE [Number] = @Number;
-                        """,
-                        connection,
-                        transaction);
-                    registrationCommand.Parameters.Add(new SqlParameter("@Number", SqlDbType.NVarChar, 16) { Value = registration });
-                    var registrationIdValue = await registrationCommand.ExecuteScalarAsync(cancellationToken);
-                    int registrationId;
-                    if (registrationIdValue is int existingId)
-                    {
-                        registrationId = existingId;
-                    }
-                    else
-                    {
-                        await using var insertRegistrationCommand = new SqlCommand(
-                            """
-                            INSERT INTO [Registration] ([Number])
-                            VALUES (@Number);
-                            SELECT CAST(SCOPE_IDENTITY() AS INT);
-                            """,
-                            connection,
-                            transaction);
-                        insertRegistrationCommand.Parameters.Add(new SqlParameter("@Number", SqlDbType.NVarChar, 16) { Value = registration });
-                        registrationId = Convert.ToInt32(await insertRegistrationCommand.ExecuteScalarAsync(cancellationToken));
-                    }
-
-                    await using var relationCommand = new SqlCommand(
-                        """
-                        IF NOT EXISTS (
-                            SELECT 1 FROM [Rating] WITH (UPDLOCK, HOLDLOCK)
-                            WHERE [RegistrationId] = @RegistrationId AND [MediaId] = @MediaId
-                        )
-                        BEGIN
-                            INSERT INTO [Rating] ([RegistrationId], [MediaId], [Rating])
-                            VALUES (@RegistrationId, @MediaId, NULL);
-                        END;
-                        """,
-                        connection,
-                        transaction);
-                    relationCommand.Parameters.Add(new SqlParameter("@RegistrationId", SqlDbType.Int) { Value = registrationId });
-                    relationCommand.Parameters.Add(new SqlParameter("@MediaId", SqlDbType.Int) { Value = mediaId });
-                    await relationCommand.ExecuteNonQueryAsync(cancellationToken);
-                }
+                await SaveRecognizedPlatesInTransactionAsync(
+                    connection,
+                    transaction,
+                    mediaId,
+                    plates,
+                    cancellationToken);
             }
 
             await using var completeCommand = new SqlCommand(
@@ -426,6 +438,71 @@ public sealed class MediaRepository : IMediaRepository, IMediaAnalysisRepository
         }
     }
 
+    private static async Task SaveRecognizedPlatesInTransactionAsync(
+        SqlConnection connection,
+        SqlTransaction transaction,
+        int mediaId,
+        IReadOnlyCollection<PlateRecognition> plates,
+        CancellationToken cancellationToken)
+    {
+        foreach (var registration in plates
+            .Select(plate => plate.Registration.Trim().ToUpperInvariant())
+            .Distinct(StringComparer.Ordinal))
+        {
+            if (registration.Length is < 4 or > 16
+                || registration.Any(character => !char.IsAsciiLetterOrDigit(character)))
+            {
+                throw new InvalidOperationException("The recognizer returned an invalid registration.");
+            }
+
+            await using var registrationCommand = new SqlCommand(
+                """
+                SELECT [Id]
+                FROM [Registration] WITH (UPDLOCK, HOLDLOCK)
+                WHERE [Number] = @Number;
+                """,
+                connection,
+                transaction);
+            registrationCommand.Parameters.Add(new SqlParameter("@Number", SqlDbType.NVarChar, 16) { Value = registration });
+            var registrationIdValue = await registrationCommand.ExecuteScalarAsync(cancellationToken);
+            int registrationId;
+            if (registrationIdValue is int existingId)
+            {
+                registrationId = existingId;
+            }
+            else
+            {
+                await using var insertRegistrationCommand = new SqlCommand(
+                    """
+                    INSERT INTO [Registration] ([Number])
+                    VALUES (@Number);
+                    SELECT CAST(SCOPE_IDENTITY() AS INT);
+                    """,
+                    connection,
+                    transaction);
+                insertRegistrationCommand.Parameters.Add(new SqlParameter("@Number", SqlDbType.NVarChar, 16) { Value = registration });
+                registrationId = Convert.ToInt32(await insertRegistrationCommand.ExecuteScalarAsync(cancellationToken));
+            }
+
+            await using var relationCommand = new SqlCommand(
+                """
+                IF NOT EXISTS (
+                    SELECT 1 FROM [Rating] WITH (UPDLOCK, HOLDLOCK)
+                    WHERE [RegistrationId] = @RegistrationId AND [MediaId] = @MediaId
+                )
+                BEGIN
+                    INSERT INTO [Rating] ([RegistrationId], [MediaId], [Rating])
+                    VALUES (@RegistrationId, @MediaId, NULL);
+                END;
+                """,
+                connection,
+                transaction);
+            relationCommand.Parameters.Add(new SqlParameter("@RegistrationId", SqlDbType.Int) { Value = registrationId });
+            relationCommand.Parameters.Add(new SqlParameter("@MediaId", SqlDbType.Int) { Value = mediaId });
+            await relationCommand.ExecuteNonQueryAsync(cancellationToken);
+        }
+    }
+
     public async Task FailAsync(
         int mediaId,
         string errorCode,
@@ -436,7 +513,11 @@ public sealed class MediaRepository : IMediaRepository, IMediaAnalysisRepository
 
         const string sql = """
             UPDATE [MediaAnalysisJobs]
-            SET [Status] = CASE WHEN [AttemptCount] >= @MaxAttempts THEN 'FAILED' ELSE 'PENDING' END,
+            SET [Status] = CASE
+                    WHEN [AttemptCount] >= @MaxAttempts OR @ErrorCode IN ('VIDEO_TOO_LONG', 'INVALID_MEDIA')
+                    THEN 'FAILED'
+                    ELSE 'PENDING'
+                END,
                 [LastErrorCode] = @ErrorCode,
                 [UpdatedAt] = SYSUTCDATETIME()
             WHERE [MediaId] = @MediaId AND [Status] = 'PROCESSING';

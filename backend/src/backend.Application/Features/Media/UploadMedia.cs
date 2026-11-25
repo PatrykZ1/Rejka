@@ -133,12 +133,15 @@ public sealed class UploadMedia
         int mediaId;
         try
         {
-            var analyzeImage = normalizedContentType is "image/jpeg" or "image/png";
+            var analyzeMedia = normalizedContentType is "image/jpeg"
+                or "image/png"
+                or "video/mp4"
+                or "video/quicktime";
             mediaId = await _mediaRepository.AddWithActivityRecordAsync(
                 media,
                 "UPLOAD",
                 now,
-                enqueueImageAnalysis: analyzeImage,
+                enqueueMediaAnalysis: analyzeMedia,
                 cancellationToken);
         }
         catch (Exception ex)
@@ -149,7 +152,7 @@ public sealed class UploadMedia
         }
 
         media.SetId(mediaId);
-        if (normalizedContentType is "image/jpeg" or "image/png")
+        if (normalizedContentType is "image/jpeg" or "image/png" or "video/mp4" or "video/quicktime")
         {
             media.SetAnalysisStatus(Domain.Media.MediaAnalysisStatus.Pending);
         }

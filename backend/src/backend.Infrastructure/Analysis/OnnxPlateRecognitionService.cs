@@ -488,8 +488,7 @@ public sealed class OnnxPlateRecognitionService : IPlateRecognitionService, IDis
             : (float)Math.Exp(logConfidence / characterCount);
         var rawText = text.ToString();
         var registration = rawText.TrimEnd('_');
-        if (registration.Length is < 4 or > 8
-            || registration.Any(character => !char.IsAsciiLetterOrDigit(character)))
+        if (!PolishPlateNumberFormat.IsValid(registration))
         {
             return new OcrReading(rawText, null, overallConfidence);
         }

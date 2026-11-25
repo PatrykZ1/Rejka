@@ -5,6 +5,11 @@ public sealed record MediaAnalysisWorkItem(int MediaId, string BlobName, int Att
 public interface IMediaAnalysisRepository
 {
     Task<MediaAnalysisWorkItem?> ClaimNextAsync(CancellationToken cancellationToken = default);
+    Task<bool> HeartbeatAsync(int mediaId, CancellationToken cancellationToken = default);
+    Task SaveRecognizedPlatesAsync(
+        int mediaId,
+        IReadOnlyCollection<PlateRecognition> plates,
+        CancellationToken cancellationToken = default);
     Task CompleteAsync(
         int mediaId,
         IReadOnlyCollection<PlateRecognition> plates,
